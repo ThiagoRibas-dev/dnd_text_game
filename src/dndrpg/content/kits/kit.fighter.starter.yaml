@@ -1,0 +1,11 @@
+id: kit.fighter.starter
+name: Fighter Starter Kit
+items:
+  - "wp.mace.heavy"
+  - "ar.chain_shirt"
+  - "sh.heavy_wooden"
+  - "it.rations.5"
+auto_equip:
+  armor: "ar.chain_shirt"
+  shield: "sh.heavy_wooden"
+  main_hand: "wp.mace.heavy"

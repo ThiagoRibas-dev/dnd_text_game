@@ -1,0 +1,5 @@
+id: kit.monk.starter
+name: Monk Starter Kit
+items:
+  - "it.rations.5"
+auto_equip: {}

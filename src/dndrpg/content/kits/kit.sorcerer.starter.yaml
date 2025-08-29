@@ -1,0 +1,7 @@
+id: kit.sorcerer.starter
+name: Sorcerer Starter Kit
+items:
+  - "wp.mace.heavy"
+  - "it.rations.5"
+auto_equip:
+  main_hand: "wp.mace.heavy"

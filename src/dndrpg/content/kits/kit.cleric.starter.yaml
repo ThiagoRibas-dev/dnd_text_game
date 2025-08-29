@@ -1,0 +1,12 @@
+id: kit.cleric.starter
+name: Cleric Starter Kit
+items:
+  - "wp.mace.heavy"
+  - "ar.chain_shirt"
+  - "sh.heavy_wooden"
+  - "it.holy_symbol"
+  - "it.rations.5"
+auto_equip:
+  armor: "ar.chain_shirt"
+  shield: "sh.heavy_wooden"
+  main_hand: "wp.mace.heavy"
