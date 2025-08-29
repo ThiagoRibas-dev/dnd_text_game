@@ -13,6 +13,26 @@ A central "Mode Manager" handles transitions between these states. The game will
 
 ---
 
+### Notes and Rules ###
+
+**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail), Iteration > request and wait permission to Execute/Implement > Summarize changes > Ask for next step.
+
+**Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why). Only once the plan has been accepted, we will execute the plan and edit the files in question.
+
+**Editing Files:** Avoid trying to avoid whole files at once. Edit specific, directed snippets at a time.
+
+**Ruff Linter:** An is an extremely fast Python linter and code formatter. After performing a batch of changes, we will always run `ruff check . --fix` to ensure things are in order.
+
+**Running the Game:** Use the command `uv run python -m dndrpg`.
+
+---
+
+## References: 
+/docs/D&D 3.5e Effects and State Specification.txt
+/docs/D&D 3.5e Text RPG Game Spec.txt
+
+---
+
 ## Project Directory Structure
 
 ```
@@ -70,54 +90,36 @@ A central "Mode Manager" handles transitions between these states. The game will
 
 ---
 
-### Notes and Rules ###
-
-**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail), Iteration > request and wait permission to Execute/Implement > Summarize changes > Ask for next step.
-
-**Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why). Only once the plan has been accepted, we will execute the plan and edit the files in question.
-
-**Ruff Linter:** An is an extremely fast Python linter and code formatter. After performing a batch of changes, we will always run `ruff check . --fix` to ensure things are in order.
-
-**Running the Game:** Use the command `uv run python -m dndrpg`.
-
----
-
-## References: 
-/docs/D&D 3.5e Effects and State Specification.txt
-/docs/D&D 3.5e Text RPG Game Spec.txt
-
----
-
 ## v1.0 Roadmap (milestones)
 
-M0 — Boot flow: Campaigns, Saves, Character Creation
-- [ ] Title screen & boot flow
-  - [ ] Title screen (Textual screen): New Game, Continue, Load Game, Delete Save, Settings, Quit
-  - [ ] “Continue” loads most recent save; “Load” shows save list with metadata (campaign, party, in-game time)
-  - [ ] Save slot folder structure: saves/<slot-id>/save.json (+ meta.json, replay seed, optional screenshots)
-  - [ ] Save index (saves/index.json) with versioning and last-played timestamps
-  - [ ] Engine version and content pack hashes recorded for migration checks
-- [ ] CampaignDefinition content
-  - [ ] Content schema + loader for campaigns (campaigns/*.yaml)
-  - [ ] Fields: id, name, description, start_area, start_coords, start_time, start_level, allowed_races/classes/feats, starting_gold_policy, starting_equipment_packs, random_encounter_tables, rest_rules, houserules (toggles)
-  - [ ] Default campaign: “SRD Sandbox”
-- [ ] Character Creation (wizard)
-  - [ ] Ability scores: choose method (4d6 drop lowest, point-buy 25/28/32, standard array)
-  - [ ] Race (with subrace), alignment (gated by class), deity (optional), domains (for cleric)
-  - [ ] Class/level 1: class pick (Fighter/Cleric/Sorcerer/Monk; later Crusader/Totemist), HP rule (max at 1st), BAB/saves bases
-  - [ ] Skills: skill ranks allocation (auto-calc class/cross-class costs; human bonus; INT mod)
-  - [ ] Feats: pick by level/race/class; prerequisites validation
-  - [ ] Spells:
-    - [ ] Cleric: pick domains; prepared spells (domain slots auto); spontaneous cure/inflict flag
-    - [ ] Sorcerer: spells known; per-day slots computed
-    - [ ] Wizard (later): spellbook contents + prepared list
-  - [ ] Starting wealth:
-    - [ ] Option A: class kits (from content) or Option B: roll class gold and shop
-  - [ ] Equipment: pick from kits or purchase; auto-equip reasonable defaults
-  - [ ] Summary screen with validation (encumbrance, illegal combos) → confirm and start
-  - [ ] Output: fully-built Entity + initial GameState seeded to campaign start
-- [ ] CLI fallback (no TUI)
-  - [ ] Commands: new, continue, load <slot>, delete <slot>, create-character (wizard in prompts)
+M0 — Boot flow: Campaigns, Saves, Character Creation [x]
+- [x] Title screen & boot flow
+  - [x] Title screen (Textual screen): New Game, Continue, Load Game, Delete Save, Settings, Quit
+  - [x] “Continue” loads most recent save; “Load” shows save list with metadata (campaign, party, in-game time)
+  - [x] Save slot folder structure: saves/<slot-id>/save.json (+ meta.json, replay seed, optional screenshots)
+  - [x] Save index (saves/index.json) with versioning and last-played timestamps
+  - [x] Engine version and content pack hashes recorded for migration checks
+- [x] CampaignDefinition content
+  - [x] Content schema + loader for campaigns (campaigns/*.yaml)
+  - [x] Fields: id, name, description, start_area, start_coords, start_time, start_level, allowed_races/classes/feats, starting_gold_policy, starting_equipment_packs, random_encounter_tables, rest_rules, houserules (toggles)
+  - [x] Default campaign: “SRD Sandbox”
+- [x] Character Creation (wizard)
+  - [x] Ability scores: choose method (4d6 drop lowest, point-buy 25/28/32, standard array)
+  - [x] Race (with subrace), alignment (gated by class), deity (optional), domains (for cleric)
+  - [x] Class/level 1: class pick (Fighter/Cleric/Sorcerer/Monk; later Crusader/Totemist), HP rule (max at 1st), BAB/saves bases
+  - [x] Skills: skill ranks allocation (auto-calc class/cross-class costs; human bonus; INT mod)
+  - [x] Feats: pick by level/race/class; prerequisites validation
+  - [x] Spells:
+    - [x] Cleric: pick domains; prepared spells (domain slots auto); spontaneous cure/inflict flag
+    - [x] Sorcerer: spells known; per-day slots computed
+    - [x] Wizard (later): spellbook contents + prepared list
+  - [x] Starting wealth:
+    - [x] Option A: class kits (from content) or Option B: roll class gold and shop
+  - [x] Equipment: pick from kits or purchase; auto-equip reasonable defaults
+  - [x] Summary screen with validation (encumbrance, illegal combos) → confirm and start
+  - [x] Output: fully-built Entity + initial GameState seeded to campaign start
+- [x] CLI fallback (no TUI)
+  - [x] Commands: new, continue, load <slot>, delete <slot>, create-character (wizard in prompts)
 
 Acceptance: From the title screen, you can New Game → choose SRD Sandbox → build a level 1 character → spawn into world; Continue/Load works with save slots; saves record campaign id/version.
 
