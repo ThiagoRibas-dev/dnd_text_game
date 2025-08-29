@@ -1,0 +1,8 @@
+type: shield
+id: sh.heavy_wooden
+name: Heavy Wooden Shield
+shield_bonus: 2
+armor_check_penalty: -2
+arcane_spell_failure_pct: 15
+weight_lb: 10.0
+cost_gp: 7.0

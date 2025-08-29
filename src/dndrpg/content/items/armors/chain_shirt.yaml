@@ -1,0 +1,10 @@
+type: armor
+id: ar.chain_shirt
+name: Chain Shirt
+armor_type: light
+armor_bonus: 4
+max_dex_bonus: 4
+armor_check_penalty: -2
+arcane_spell_failure_pct: 20
+weight_lb: 25.0
+cost_gp: 100.0

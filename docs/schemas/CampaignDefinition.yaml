@@ -1,0 +1,28 @@
+id: camp.srd_sandbox
+name: SRD Sandbox
+description: A system-reference solo sandbox with SRD content.
+start_area: "overworld:greenfields"
+start_coords: [12, 8]
+start_time: "1000-01-01T08:00:00Z"
+start_level: 1
+allowed:
+  races: ["human","dwarf","elf","halfling","half-elf","half-orc","gnome"]
+  classes: ["fighter","cleric","sorcerer","monk","crusader","totemist"]
+  feats: "*"
+  alignments: "*"
+starting_gold_policy: "kits"  # kits | roll
+starting_equipment_packs:
+  fighter: ["kit.fighter.starter"]
+  cleric: ["kit.cleric.starter"]
+  sorcerer: ["kit.sorcerer.starter"]
+  monk: ["kit.monk.starter"]
+rest_rules:
+  arcane_prep: { rest_hours: 8, prep_hours: 1 }
+  divine_prep: { time: "dawn", prep_hours: 1 }
+houserules:
+  hp_first_level_max: true
+  point_buy: 28
+  dr_policy: "per_attack_total"
+encounters:
+  wilderness: "encounterTable.forest.day"
+  night: "encounterTable.forest.night"

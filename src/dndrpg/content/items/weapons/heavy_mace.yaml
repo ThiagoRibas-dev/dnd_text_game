@@ -1,0 +1,12 @@
+type: weapon
+id: wp.mace.heavy
+name: Heavy Mace
+category: simple
+kind: melee
+handed: one-handed
+damage_dice_m: "1d8"
+crit_range: 20
+crit_mult: 2
+damage_types: ["bludgeoning"]
+weight_lb: 8.0
+cost_gp: 12.0

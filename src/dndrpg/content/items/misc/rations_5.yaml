@@ -1,0 +1,5 @@
+type: item
+id: it.rations.5
+name: Rations (5 days)
+weight_lb: 5.0
+cost_gp: 2.5

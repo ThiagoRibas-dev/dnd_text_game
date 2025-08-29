@@ -2,6 +2,7 @@ from textual.widgets import Input, Static
 from textual.reactive import reactive
 from rich.table import Table
 from ..engine.state import GameState
+from ..engine.models import Item
 
 class StatsPanel(Static):
     state: GameState | None = None
@@ -21,10 +22,10 @@ class StatsPanel(Static):
         self.update(table)
 
 class InventoryPanel(Static):
-    def update_inventory(self, items: list[str], resources: dict[str, int]):
+    def update_inventory(self, items: list[Item], resources: dict[str, int]):
         table = Table(title="Inventory / Resources", pad_edge=False, show_header=False)
         if items:
-            table.add_row("Items", ", ".join(items))
+            table.add_row("Items", ", ".join(it.name for it in items))
         if resources:
             for k, v in resources.items():
                 table.add_row(k, str(v))
