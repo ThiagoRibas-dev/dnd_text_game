@@ -1,4 +1,4 @@
-from pathlib import Path
+from ..util.paths import content_dir
 from .state import GameState, default_state
 from .loader import load_content, ContentIndex
 from .campaigns import CampaignDefinition
@@ -29,7 +29,7 @@ def base_save(is_good: str, level: int) -> int:
 
 class GameEngine:
     def __init__(self):
-        self.content_dir = Path(__file__).resolve().parent.parent / "content"
+        self.content_dir = content_dir()
         self.content: ContentIndex = load_content(self.content_dir)
         self.campaign: CampaignDefinition | None = None
         self.state: GameState = default_state(self.content)  # placeholder until New Game

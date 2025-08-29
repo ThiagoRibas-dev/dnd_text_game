@@ -15,7 +15,7 @@ A central "Mode Manager" handles transitions between these states. The game will
 
 ### Notes and Rules ###
 
-**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail, brainstorm), Iteration > request and wait permission to Execute/Implement > Update Roadmap > Summarize changes > Ask for next step.
+**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail, consider possibilities, brainstorm), Iteration > request and wait permission to Execute/Implement > Update Roadmap > Summarize changes > Ask for next step.
 
 **Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why). Only once the plan has been accepted, we will execute the plan and edit the files in question.
 
