@@ -1,0 +1,203 @@
+D&D 3.5e Text RPG – Game Spec (v0.1)
+Incorporates the Effects/State Spec v1.1 and the three modes of play (Encounter, Exploration/Travel, Downtime). This is the gameplay/engine spec your content and UI will target.
+
+1) Scope and goals
+- Scope: Single-player text-first game with AI-controlled NPCs/monsters. Grid-based encounters; travel/exploration on the same map; downtime task engine.
+- Goals:
+  - Drive all mechanics through the Effects/State model (definitions at author-time, instances at runtime).
+  - First-class support for Encounter, Exploration/Travel, and Downtime modes with clean transitions.
+  - Deterministic, explainable outcomes (SR → Save → Attack → Resolution; canonical damage pipeline).
+  - Content-driven: races/classes/feats/spells/items/conditions/traps/hazards authored as JSON/YAML blueprints.
+
+2) Core architecture
+- Engine layers
+  - Entity System: Entities with attributes, abilities, senses, movement, defenses, skills, resources, conditions, inventory, and content lists (known/prepared spells, maneuvers, soulmelds, etc.). Derived stats computed on demand via active Modifiers and Rule Hooks.
+  - Effects Engine: Loads and attaches EffectInstances; evaluates SR/Save/Attack gates; executes Operations; registers Rule Hooks; manages suppression/antimagic/dispels.
+  - Damage System: Applies the canonical 7-step damage pipeline (immunity → conversion → resistance/DR/ablative pools → vulnerability → apply → rider negation → post hooks).
+  - Scheduler/Time: Game clock and tick scheduler (rounds, minutes, hours, days); durations; recurring ticks; ongoing saves; refresh cadences (per_round, per_encounter, per_day).
+  - Mode Manager: State machine for Encounter, Exploration, Downtime; supplies tick size and default handlers; transitions and boundaries.
+  - Targeting/Area: Grid geometry, LoS/LoE, cover/concealment, shape placement (burst, cone, line, wall, square/sphere).
+  - Command Layer (CLI): Parses verbs into engine actions; provides explain/trace; supports macros; mode-aware command set.
+
+3) Game modes (state machine)
+Modes: encounter | exploration | downtime
+
+3.1 Mode manager
+- API
+  - startEncounter(trigger, participants)
+  - endEncounter(reason)
+  - setMode(mode, params?) // moves between exploration/downtime
+  - advanceTime(duration) // delegates to scheduler with mode tick policy
+- Transitions
+  - Exploration → Encounter: Random encounter/trap/NPC triggers; initiative rolled; schedule per-encounter resources and “at encounter start” hooks; set grids and positions.
+  - Encounter → Exploration: All enemies neutralized/left; trap resolved; explicit disengage; resolve “until end of encounter” effects; refresh per-encounter resources; grant post-battle housekeeping (search, stabilize, loot).
+  - Exploration ↔ Downtime: Player initiates long tasks (camp, craft, travel-in-days); interruptions (encounters, events) pause tasks and transition back.
+- Time granularity
+  - Encounter: rounds (6s); turn order; actions/interrupts.
+  - Exploration: minutes/hours; batched checks and movement.
+  - Downtime: days/weeks; task engine, daily refresh cycles, item creation.
+
+4) Time and scheduler
+- Single game clock; scheduler executes due timers in order.
+- Ticks
+  - Encounter: advanceRound(1) → startOfRound → per-entity startOfTurn/turn actions/endOfTurn → endOfRound.
+  - Exploration: advanceMinutes(N) or advanceHours(N) → process recurring ticks/ongoing saves that land within window; random encounter checks; light consumption; environmental exposure; recovery ticks (fast healing/regeneration).
+  - Downtime: advanceDays/Weeks → daily refresh (per_day resources, natural healing, disease/poison ticks); task steps; rest/prep windows.
+- Rest/Prep windows (interruptible)
+  - Arcane: 8 hours rest + 1h prep; Divine: fixed-time (e.g., dawn) + 1h prep.
+  - Interrupts (encounter) break rest; partial rest counts for fatigue removal but not spells (RAW).
+
+5) Entities and content
+- Entity fields: As per Effects/State spec (abilities, HP/AC, saves, senses, movement, defenses, proficiencies, skills, resources, conditions, inventory, prepared/known lists, position, tags).
+- Content packaging
+  - JSON/YAML blueprints:
+    - Races (e.g., Dwarf, Elf), classes (Fighter, Cleric, Sorcerer, Monk; Crusader; Totemist), feats (Power Attack, Blind-Fight, Augment Summoning, Law/Luck Devotion), spells (Grease, Divine Power, Luminous Armor, Battletide, Arcane Spellsurge; Conjure Ice Beast I), conditions (canonical catalog), items (SRD arms/armor/materials), zones/hazards (traps, darkness, antimagic fields).
+  - Authoring guidelines:
+    - Use tags and descriptors consistently (school, [good/evil/law/chaos], mind-affecting, fear, poison, paralysis, death, polymorph, summoning, calling, creation, teleportation, energy types, force).
+    - Choose stacking types (enhancement/sacred/profane/luck/resistance/etc.) and same-source keys explicitly.
+    - Model resources (spell slots, turn attempts, devotion uses, maneuvers readied/granted, essentia) via ResourceDefinitions.
+
+6) Encounter rules (combat/traps/NPC interactions)
+- Initiative: 1d20 + Dex mod + misc; stable order with “delay/ready” support.
+- Turn structure: Swift/Immediate/Free, Move, Standard/Full, 5-foot step, ready/delay, AoO.
+- Movement: 5-ft grid; speeds; difficult terrain; flight (maneuverability); prone/standing; withdraw, tumble, grapple/trip/disarm (subset initially).
+- Targeting & gates per target: SR Gate (if SR:Yes for Spell/Sp), Save Gate (Fort/Ref/Will; dcExpression), Attack Gate (melee/ranged/touch/ray).
+- Damage pipeline: Apply per spec; policy: DR applies to total physical damage per attack (engine-wide).
+- Conditions: Use canonical definitions; precedence: dead > petrified > paralyzed > stunned > dazed > prone.
+- Suppression/Antimagic: Su/Sp/Spell suppressed; Ex unaffected; summoned creatures wink out; continuous items suppressed; walls of force/prismatic exceptions.
+- End of encounter semantics:
+  - Remove effects with “until end of encounter” durations; reset per_encounter resources (e.g., Crusader maneuvers granted cycle); trigger “on encounter end” hooks; ongoing diseases/poisons continue.
+
+7) Exploration/Travel rules
+- Travel & pace
+  - Grid/overworld mapping shared; per 10-min tick compute progress: distance = base speed adjusted by encumbrance, mounts, terrain, weather, and pace (fast/normal/slow); forced march triggers fatigue (conditions).
+- Stealth/awareness loop
+  - Group Stealth vs encounter Perception (Listen/Spot) with lighting/cover modifiers; distance of detection; set surprise/awareness for encounter start.
+- Search/Traps
+  - Active Search: 1 minute per 10-ft square; vs trap Search DC; on success reveal trap zone.
+  - Disable Device: time + retries; failure consequences per trap.
+  - Traps modeled as zones with on-enter/on-leave/trigger hooks (Reflex saves, attack rolls for darts, etc.).
+- Light & vision
+  - Light sources as items/effects with durations; low-light vision doubles bright radius; darkvision in black/white; concealment/miss chance in low light; daylight/darkness interactions.
+- Foraging/Navigation/Tracking
+  - Survival checks for food/water; navigation to avoid getting lost; tracking with DC by terrain/time; scent/blindsense/blindsight hooks apply.
+- Random encounters
+  - Environment tables (by biome/time/weather) with cadence (e.g., per hour); spawn as entities/zones; immediate transition to Encounter mode if hostile.
+
+8) Downtime rules
+- Task engine
+  - TaskDefinition: id, timeUnit (days/weeks), step size, inputs, costs (gp/xp/resources), rolls/checks, progress formula, completion condition, outputs, interrupts policy.
+  - Core tasks:
+    - Rest 8h; Prepare spells 1h.
+    - Craft (RAW): progress per week = check result × DC; cost = 1/3 price; completion when progress ≥ price × 10 sp.
+    - Profession: gp/week = check result (or table-based).
+    - Research: DC over days; libraries grant bonuses.
+    - Scribe/Craft Magic Items: per RAW (time, gp, xp, CL/prereqs).
+    - Hirelings/operations: abstracted tasks for income or construction.
+- Daily cycles
+  - Refresh per_day/per_rest resources; natural healing (1 hp/level per day of rest; ability damage 1/day); disease/poison daily saves; environmental exposure; regeneration/fast healing ticks.
+- Interrupts
+  - Random events (fire, theft, rumors, quests); random encounters; weather.
+
+9) Command interface (text UI)
+- General
+  - help, look, examine <target>, status, inventory, equip <item>, unequip <item>, take/drop <item>, use <item>, explain [last|actionId], end turn, save, load.
+- Encounter
+  - move <dir|to x,y> [squares], 5-foot, attack <target>, powerattack <N>, cast <spell> [at <x,y>|on <target>], activate <feat/ability> [args], initiate <maneuver>, ready [action], withdraw, trip <target>, grapple <target>, stand, delay, end turn.
+- Exploration
+  - travel <direction|to x,y> [pace fast|normal|slow], advance <minutes|hours> N, search [area|square x,y] [minutes], scout <minutes>, hide, forage <hours>, track <target>, camp, wait until <dawn|sunset|time>.
+- Downtime
+  - rest 8h, prepare spells, start craft <item> dc <dc>, work <days|weeks> N [take10|take20], research <topic> <days>, scribe scroll <spell>, craft wondrous <item>, profession <type> <weeks>, manage hirelings, pass <days>.
+- Meta
+  - repeat, cancel (current action/task), resume (paused task), macros: scout, secure camp, explore room.
+
+10) Explain/trace
+- explain last prints:
+  - Gates: SR roll/result; Save DC/result/branch; Attack roll/confirm, concealment/miss chance.
+  - Modifiers stacked: by bonus type and sourceKey; final values (e.g., AC breakdown).
+  - Damage breakdown: packets → resist/DR/pool → vulnerability → HP/THP; injury riders negated if DR reduced to 0.
+  - Duration/scheduler: timers started, next ticks, end conditions.
+- Determinism: seeded RNG per encounter; include seed in logs for replay.
+
+11) Zones and hazards
+- Zones are entities with shape, duration, and hooks (on-enter, on-leave, start/end-of-turn for occupants).
+- Examples:
+  - Grease square: Reflex save or prone; Balance DC 10 to move; duration CL rounds.
+  - Darkness/Daylight auras: concealment and counters.
+  - Antimagic field: suppress Su/Sp/Spell; summoned creatures wink out.
+  - Trap zones: pressure plate (on-enter → darts attack), pit (on-enter → fall), glyphs (on-enter → spell effect).
+
+12) Engine policies (documented defaults)
+- Grid: 5-ft squares; diagonal costs 1.5 (5-10-5).
+- Cover: +4 AC standard; +2 for partial; concealment 20%; total concealment 50%.
+- DR application: applied to total physical damage per attack (not per packet); spell/energy damage ignores DR.
+- Rounding: round down unless source states otherwise.
+- Named effect stacking: same name does not stack (highest magnitude wins) unless effect explicitly allows stacks.
+- SR checks: one CL check per target per casting/use; success/failure persists for that instance.
+- Antimagic: suppresses Su/Sp/Spell; Ex unaffected; wall of force/prismatic exceptions; disjunction vs AMF per RAW.
+- Summons: wink out in antimagic; reappear when suppression ends; effects end when duration ends or summoned creature dismissed/dies.
+
+13) AI (baseline)
+- Behavior trees per role:
+  - Brute: close to melee, power attack when safe, focus lowest-AC target.
+  - Skirmisher: ranged focus; 5-foot step, withdraw if engaged.
+  - Caster: grease/web/hold person opener; divine power/self-buffs; target low saves; conserve slots.
+- Perception/search: simple patrol; investigate noises.
+- Retreat/morale: flee under 25% HP if outmatched; regroup.
+
+14) Persistence and content
+- Save state: entities (PC, NPCs), zones, map, inventory, scheduler queue, mode, RNG seed; compress to JSON.
+- Content namespaces: core SRD pack; optional modules (Tome of Battle, Incarnum, Psionics).
+- Hot reload: reload blueprints between encounters; integrity checks for running instances.
+
+15) Testing and validation
+- Unit tests
+  - Stacking: enhancement vs morale vs dodge; same-source untyped doesn’t stack.
+  - Gates: SR once per target; saves branch correctly; rays/touches use correct AC.
+  - Damage pipeline: immunity → resist/DR/pool → vulnerability; DR negates injury riders; temp HP before real HP.
+  - Antimagic: suppresses Su/Sp/Spell only; Ex persists; summons wink out.
+  - Encounter boundaries: per-encounter resets; end-of-encounter effects removed.
+  - Rest/prep: arcane and divine windows; interrupts cancel spell prep.
+- Scenario tests
+  - Fighter vs Goblin with DR 5/silver; Power Attack math; prone bonuses/penalties.
+  - Grease zone: saves each round; Balance DC movement; AoO interactions.
+  - Divine Power: BAB floor = level; +6 STR enhancement; temp HP per CL; duration expires.
+  - Travel hour: light consumption; random encounter; stealth vs perception surprise state.
+  - Craft 2 weeks (take 10): correct progress and output; interrupts pause and resume.
+
+16) Minimal content set (MVP)
+- Races: Human, Dwarf, Elf, Halfling, Half-Elf, Half-Orc, Gnome (core traits as passive effects).
+- Classes: Fighter (bonus feats), Cleric (spells, domains, turning), Sorcerer (spells known/day, familiar stub), Monk (unarmed/flurry), Crusader (maneuvers), Totemist (soulmelds/binds).
+- Feats: Power Attack, Blind-Fight, Augment Summoning, Law Devotion, Luck Devotion, Maximize Spell.
+- Spells: Grease, Divine Power, Luminous Armor, Battletide, Arcane Spellsurge, Conjure Ice Beast I.
+- Conditions: full catalog (blinded, prone, stunned, etc.) as ConditionDefinitions.
+- Items: SRD basic gear; materials (silver/cold iron/adamantine); holy symbol, spell component pouch; light sources.
+- Traps/Hazards: pit, darts, scythe blade, glyph of warding, antimagic field zone, darkness.
+
+17) Mode-aware UX polish
+- End-of-round summaries in encounters (HP changes, conditions, remaining durations).
+- Exploration summaries per hour (distance, light burned, foraging result, encounter check).
+- Downtime summaries per day/week (task progress, daily refreshes, random events).
+- “Explain time” (explain last-time) shows what timers advanced and what refreshed.
+
+Appendix A: Mode Manager contract (pseudo)
+- startEncounter(participants): snapshot exploration/downtime tasks, roll initiative, set per-encounter resources, grant Crusader maneuvers, fire hooks: onEncounterStart.
+- endEncounter(reason): clear end-of-encounter effects, reset per-encounter resources, schedule short cleanup window, fire hooks: onEncounterEnd, re-enter exploration at same location/time.
+- advanceTime(duration):
+  - Encounter: N rounds with turn loop and interrupts.
+  - Exploration: accumulate minutes/hours; periodic checks (encounter/weather/exposure/light); auto-attach zones on triggers.
+  - Downtime: step tasks; daily refresh; interrupts push to Encounter and pause task.
+
+Appendix B: Command grammar (concise)
+- attack <target> [with <weapon>] [powerattack <N>]
+- cast <spell> [on <target>|at <x,y>]
+- activate <ability|feat> [args]
+- move <dir|x,y> [squares]
+- 5-foot, withdraw, ready <action>, delay
+- travel <dir|x,y> [pace <fast|normal|slow>]
+- search [area|x,y] [<minutes>]
+- scout <minutes>, hide, forage <hours>, track <target>
+- rest 8h, prepare spells, start craft <item> dc <dc>, work <days|weeks> <N> [take10|take20], research <topic> <days>, profession <type> <weeks>, scribe scroll <spell>
+- explain [last], status, inventory, equip/unequip, save/load
+
+This spec ties your Effects/State model directly into the three modes, defines transitions and time semantics, locks key engine policies, and lays out the command/UI surface and content needed for an MVP. Want me to turn this into a skeletal repo layout with JSON schemas for Effect/Condition/Resource/Task definitions next?

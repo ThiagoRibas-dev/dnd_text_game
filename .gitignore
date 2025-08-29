@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Virtual environments
+.venv/
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+
+# Local scripts
+run-codium.bat
+
+# Caches
+.mypy_cache/
+
+# Lock files
+uv.lock

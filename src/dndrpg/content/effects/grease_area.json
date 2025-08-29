@@ -1,0 +1,21 @@
+{
+  "id": "spell.grease.square",
+  "name": "Grease (Area)",
+  "abilityType": "Spell",
+  "school": "Conjuration(Creation)",
+  "activation": { "action": "standard", "costs": ["spellslot:sorwiz:1"] },
+  "range": "close",
+  "area": { "shape": "square", "size": 10 },
+  "duration": { "type": "rounds", "formula": "caster_level" },
+  "operations": [
+    {
+      "op": "zone.create",
+      "zone": {
+        "shape": { "type": "square", "size": 10 },
+        "hooks": [
+          { "scope": "scheduler", "event": "startOfTurn", "action": [{ "op": "save", "type": "Reflex", "dc": 10, "onFail": [{ "op": "condition.apply", "id": "cond.prone" }]}] }
+        ]
+      }
+    }
+  ]
+}

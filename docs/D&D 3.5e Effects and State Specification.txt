@@ -1,0 +1,455 @@
+D&D 3.5e Effects and State Specification
+Version 1.1
+
+Overview
+This specification defines a minimal, composable, and uniform model to represent all passive and active effects in D&D 3.5e. It reduces the rules to:
+- Declarative state held by entities (runtime); and
+- Effect definitions (blueprints) that attach as effect instances (runtime), optionally gated by SR/saves/attacks, and that change or gate state via modifiers, operations, rule hooks, and resources.
+
+The model is system-agnostic and represents feats, class features, spells/powers/maneuvers/soulmelds/bindings, racial traits, items, conditions, and zones consistently.
+
+Goals
+- Minimal primitives that compose into all 3.5e subsystems.
+- Uniform semantics for stacking, immunities/resistances/DR, SR/PR, dispels/antimagic, saves/attacks, durations, targeting, and triggers.
+- Explicit separation of blueprints (definitions) from runtime attachments (instances).
+- Deterministic order-of-operations and evaluation context.
+- Extensible via tags, expressions, resources, and rule hooks without proliferating bespoke effect types.
+
+Terminology
+- Definition (blueprint): authoring-time specification of behavior (e.g., EffectDefinition, ResourceDefinition).
+- Instance (runtime): a concrete attachment or pool (e.g., EffectInstance, ResourceState).
+- Context: the complete set of evaluation inputs for activation, gating, and resolution (actor, targets, event, etc.).
+
+Core Data Model
+
+1) Entity
+A game object that can hold runtime state. All state that changes during play resides on entities.
+
+Identity and typing
+- id: unique identifier
+- name: display name
+- tags: set of strings describing the entity (e.g., humanoid, elf, undead, summoned, incorporeal, item:weapon, zone:antimagic)
+
+Attributes (extensible key/value map; runtime)
+- Core identity: level(s), HD, size, type/subtypes, alignment, languages, deity
+- Abilities: STR/DEX/CON/INT/WIS/CHA per ability:
+  - base, temporary adjustments, damage, drain
+- Combat:
+  - HP: current, max (derived from class/HD/CON plus modifiers)
+  - AC: total/touch/flat-footed and components (armor, shield, natural, deflection, dodge, size, misc)
+  - initiative, attack bonuses, damage bonuses
+- Saves: Fortitude/Reflex/Will (base, temporary), DC modifiers
+- Senses: darkvision N, low-light, blindsense N, blindsight N, tremorsense N, scent
+- Movement: land/swim/climb/burrow/fly speeds; fly maneuverability
+- Defenses: DR entries; energy resistances; immunities; vulnerabilities; SR/PR; concealment; miss chance; gating flags
+- Proficiencies: weapons/armor/shields/tools
+- Skills: ranks and bonuses
+- Resources: map of ResourceState (see Section 2)
+- Conditions: set of Condition instances attached (see Section 12)
+- Inventory/slots: items owned and equipped; slot occupancy; special slots (chakras) and binds
+- Prepared/known: spells known/prepared; power lists; maneuvers known/readied/granted; stances; soulmelds shaped/bound; feats; class features; domains; favored enemies
+- Position: grid coordinates, elevation, facing, plane
+
+Derived statistics
+- Derived stats are calculated on demand from attributes and active modifiers and follow the stacking and evaluation rules in this specification.
+
+2) Resources
+Resources are first-class pools with a blueprint (ResourceDefinition) and a runtime instance (ResourceState).
+
+2.1 ResourceDefinition (blueprint)
+Specifies how a pool is created and managed; carries formulas and policy, never live values.
+
+Fields
+- id/name: unique within its scope
+- scope: default owner for instances created from this definition:
+  - entity | effect-instance | item | zone
+- capacity:
+  - formula: expression yielding the capacity (e.g., “3 + ability_mod(cha)”, “10 * caster_level”)
+  - cap: optional absolute cap (e.g., 150)
+  - computeAt: attach | refresh | query (when capacity should be computed; see “Snapshot vs Dynamic”)
+- initial_current: expression for initial current (commonly “capacity”)
+- refresh:
+  - cadence: per_round | per_encounter | per_rest | per_day | per_week | special (with scheduler detail)
+  - behavior: reset_to_max | increment_by <expr> | no_change
+  - triggers: events that trigger refresh (rest start/end, dawn, prepare spells, etc.)
+- expiry: duration or event-based (e.g., expires with parent EffectInstance; expires at rest)
+- absorption/gating semantics (optional; for ablative pools):
+  - absorbTypes: packet matchers for damage absorption (e.g., physical; not bypassed by adamantine)
+  - absorbPerHit: integer cap per hit (per application)
+  - absorbOrder: relative order vs. resistances/DR if deviating from defaults
+- visibility: public | private | hidden (UI)
+- stacking/composition: policy when multiple definitions with same id collide (overwrite | sum | highest | latest)
+- recomputeOn: list of events that trigger capacity recomputation (e.g., level_up, ability_change, rest)
+- freezeOnAttach: bool; if true, snapshot capacity at attach time; if false, recompute per recomputeOn
+- notes: human-readable documentation
+
+2.2 ResourceState (runtime)
+Holds the live values for a pool created from a ResourceDefinition.
+
+Fields
+- id/name (matches definition)
+- owner: entityId | effectInstanceId | itemId | zoneId (per scope)
+- current: integer (live)
+- max_computed: integer (capacity realized per definition)
+- snapshot_data: optional stabilized inputs used to compute capacity when frozen
+- expires_at / remaining_duration: if the pool itself has a lifetime separate from its owner
+- suppressed: bool (e.g., while parent effect is suppressed)
+- last_refresh_time / refresh_state: scheduler bookkeeping
+- tags: optional descriptors (UI/hooks)
+
+Semantics
+- “max” as a numeric quantity is only present on ResourceState (max_computed).
+- ResourceDefinition holds formulas and policies; ResourceState holds live “current” and realized capacity.
+- Snapshot vs Dynamic:
+  - freezeOnAttach=true: snapshot capacity at attachment based on the current Context; max_computed remains fixed unless explicitly recomputed.
+  - freezeOnAttach=false: recompute capacity on recomputeOn and refresh events.
+
+Ownership and lifecycle
+- Creation: Effect activation (or setup) creates a ResourceState from a ResourceDefinition and attaches it to default scope owner.
+- Expiry: if scope is effect-instance, pool typically expires with that instance; entity-scoped pools persist across effects and reset/refresh per policy.
+- Transfer: pools may be transferred per operations/attachment rules.
+
+3) EffectDefinition (blueprint)
+Authoring specification for an effect; never directly mutates state.
+
+Identity and metadata
+- id, name, source: feat | class | spell | power | maneuver | stance | soulmeld | binding | race | item | condition | zone | other
+- abilityType: Ex | Su | Sp | Spell (see “Ability Types”)
+- school/discipline/domain: optional classification
+- descriptors: alignment (good|evil|law|chaos), mind-affecting, fear, charm, compulsion, language-dependent, death, disease, poison, paralysis, sleep, polymorph, summoning, calling, creation, teleportation, energy (acid|cold|electricity|fire|sonic|negative|positive), force, etc.
+- casterLevel / initiatorLevel / meldshaperLevel: as applicable; may be expression-resolved at runtime
+- prerequisites: boolean expression over source entity state (alignment, deity, class/level, BAB, skills, feats, proficiencies, race/type/subtype, size, known ability, wielded item)
+- stacking semantics: stacking key and/or rules (see “Stacking and Identity”)
+- notes: documentation
+
+Activation
+- action: passive | free | swift | immediate | reaction | move | standard | full-round | special
+- provokesAoO: bool (default per abilityType; may override)
+- costs: list of resource spends (spell slots, PP, turn attempts, rage use, maneuvers expended, essentia allocation, charges, XP, components/foci)
+- concentration: bool
+- cooldown: optional
+- binding-time: whether effect exists passively or requires an activation event to attach
+
+Targeting and delivery
+- range: personal | touch | close | medium | long | fixed-ft | sight | special
+- targetFilter: query constraints (self|ally|enemy|creature|object; type/subtype; alignment; HD caps; size; visibility/LoS/LoE; distance; per-caster-level caps; count limits)
+- area: none | line | cone | burst | spread | emanation | cylinder | wall | sphere | cube | parameters (size, origin, orientation)
+- LoE/LoS: required | not required | special
+- attackMode: none | melee vs AC | melee touch | ranged vs AC | ranged touch | ray | special
+
+Timing
+- when: on activation | continuous (passive) | on trigger (see “Triggers”)
+- duration: instantaneous | rounds | minutes | hours | days | permanent | concentration | special (with end conditions)
+- triggers: list of (event, predicate) pairs: startOfTurn, endOfTurn, onHit, onBeingHit, onAttackRolled, onCastSpell, onSaveSuccess/Failure, onEnterArea/onLeaveArea, etc.
+- recurring: cadence (every N [rounds|minutes|…] apply operations)
+- ongoing_save: cadence to allow targets to save periodically with branch policies
+- end conditions: dispelled; suppressed by antimagic; concentration broken; pool exhausted; target leaves area; source destroyed
+
+Gates
+- saveGate: { type: Fort|Ref|Will, dcExpression, effect: negates|half|partial|none }
+- srGate: applies to Spell/Sp when spell entry specifies SR:Yes; one caster level check per casting/use per target
+- attackGate: { mode: melee|ranged|touch|ray, AC type, concealment/miss chance integration, crit behavior }
+- Gate order (default): SR Gate → Save Gate → Attack Gate → Resolution (per target); effects may specify a special order rarely
+
+Resolution (upon successful gating per target)
+- operations: list of Operations to execute (see Section 9)
+- modifiers: list of Modifiers active while the effect instance remains attached (see Section 8)
+- ruleHooks: list of Rule Hooks to register while attached (see Section 10)
+
+Resource declarations
+- resourceDefinitions: list of ResourceDefinition to create/manage on attachment (effect-scoped or entity-scoped as dictated by definition.scope)
+
+Choices
+- choices: array of Choice definitions used to parameterize this effect (see Section 13)
+
+Suppression/dispelling flags
+- srApplies/antimagic/dispellable defaults from abilityType; overrides permitted for edge cases.
+
+4) EffectInstance (runtime)
+A concrete attachment of an EffectDefinition to a target (entity, item, or zone).
+
+Fields
+- instanceId, definitionId
+- attachedTo: Attachment (entity|slot|zone|item)
+- sourceEntityId: the entity that created/owns this instance
+- startTime / remainingDuration or expirationTime
+- active: bool (suppressed vs. active)
+- stacks: current stack count if stacking rules permit stacking of the same named effect
+- boundChoices: chosen options resulting from Choice binding
+- variables: runtime variables (e.g., stored random outcomes for consistency)
+- ownedResources: set of ResourceState instances created with scope=effect-instance
+- audit: provenance metadata (who/when/where)
+
+Lifecycle
+- Created by activation or triggers; can be suppressed (e.g., antimagic), dispelled, expired; removal cleans up modifiers, hooks, and owned resources.
+
+5) Attachment
+Specifies where and how an EffectInstance is bound.
+- target: entity | slot | zone | item | surface
+- owner: source entity id
+- occupancy semantics: whether it closes slots/chakras or coexists (e.g., chakra binding closes slot; totem chakra does not)
+- transfer semantics: whether it can move or be rebound to another attachment
+
+6) Context
+Evaluation context provided to activation, gates, rule hooks, and operations.
+
+Fields
+- actor: source entity
+- effectInstance: currently evaluated instance
+- targets: one or more target entities
+- event: current event (e.g., startOfTurn, onHit)
+- attackContext: current attack context (if applicable)
+- damagePackets: in-flight damage representation (if applicable)
+- environment: terrain, lighting, plane, concealment/cover params
+- position/time: positional data and round/initiative
+- rng: randomization handle for deterministic/evaluable resolutions
+- engine: optional handle to scheduler and systems (e.g., registering recurring ticks)
+
+7) Gates (SR/Save/Attack)
+First-class stages invoked per target to determine whether and how an effect applies.
+
+SR Gate
+- Applies when abilityType ∈ {Spell, Sp} and spell entry specifies SR:Yes; one CL check per target per casting/use.
+- On failure: effect instance does not affect that target.
+
+Save Gate
+- Compute DC via expression; branching: negates | half | partial | none per definition.
+
+Attack Gate
+- Attack roll against AC/touch per mode; integrate concealment/miss chance before hit resolution; handle crit confirmation and behavior per mode.
+
+8) Modifiers
+Typed changes to statistics, roll parameters, or tags, evaluated on demand.
+
+Fields
+- targetPath: namespaced path to stat or tag (e.g., ac.deflection, save.fortitude, skill.hide, senses.darkvision, attack.melee.bonus, resist.fire, dr.magic, speed.fly, traits.immunities, tags.add/remove)
+- operator: add | subtract | multiply | divide | set | min | max | replace | replaceFormula | cap | clamp | grantTag | removeTag | convertType
+- value: constant or expression (may reference ability mods, level/CL/HD, ranks, invested resources)
+- bonusType: stacking type (enhancement, morale, luck, insight, competence, sacred, profane, resistance, deflection, dodge, size, natural armor, natural armor (enhancement), circumstance, alchemical, unnamed)
+- sourceKey: identifier for same-source stacking policy (same source not stacking)
+- conditions: predicate over Context for applicability (e.g., unarmored, wielding, vs. giant)
+- durationOverride: optional override (if different from effect instance duration)
+- flags: srApplies/antimagic/dispellable override (rare)
+
+Evaluation and stacking
+- Within one stat:
+  - set/replace → add/sub (apply stacking rules by type and same-sourceKey) → mul/div → min/max → cap/clamp
+- Dodge bonuses stack with dodge; most typed bonuses do not stack with themselves; untyped bonuses stack unless same-sourceKey policy overrides.
+
+9) Operations
+State-changing actions executed at resolution or on scheduled ticks.
+
+Categories
+- Damage/Heal: HP, nonlethal, ability damage/drain, negative levels; typed packet generation; death
+- Condition management: add/remove condition instances (with parameters/durations)
+- Resource operations: create_resource(defId, ownerScope), spend_resource(id, amount), restore_resource(id, amount|to_max), set_resource(id, current), recompute_capacity(id), schedule_refresh(id), expire_resource(id)
+- Grant/Revoke capability: feats, proficiencies, class features, spells known/prepared, maneuvers, stances, soulmelds, binds; add/remove tags; alignment descriptors
+- Creation/Destruction: create entities/zones/objects; conjuration/calling; wall/zone with area/hooks
+- Movement/Teleport: move/teleport entities; forced movement
+- Transformation: polymorph/shapechange; set physical stats; size; NA; movement modes; senses; type/subtype; equipment handling flags
+- Scheduling: schedule recurring ticks, ongoing saves; delayed triggers; attaching/detaching rule hooks
+- Dispel/Suppress/Unsuppress: attempt to dispel, apply suppression, lift suppression
+- Attachment/Detach: bind to slot/chakra and close slots; unbind/release slots
+
+10) Rule Hooks
+Procedural intercepts that transform or gate behavior during evaluation.
+
+Fields
+- scope:
+  - targeting
+  - incoming.effect
+  - incoming.condition
+  - incoming.damage
+  - on.save (pre/post)
+  - on.attack (pre/post)
+  - on.damageDealt
+  - on.damageTaken
+  - on.crit (pre/post)
+  - on.maneuverGrant
+  - scheduler (start/end of turn/round; recurring)
+  - suppression (antimagic/dispel events)
+  - resource (onResourceSpend, onResourceDepleted, onResourceRefreshed)
+- match: predicate over Context (abilityType, school, descriptors, spell level, attack tags, packet types/material/alignment, source tags, summoned)
+- action: block | reduce | cap | multiply | convert | reflect/redirect | absorbIntoPool | suppress | reroll | setOutcome | schedule | grantRandom | setTag/clearTag | bypass
+- priority/order: optional ordering to resolve conflicts
+- duration: lifespan matches the parent effect instance unless specified
+
+11) Damage Model
+Damage is a list of packets applied through a consistent pipeline.
+
+DamagePacket
+- amount
+- type: physical.bludgeoning | physical.piercing | physical.slashing | fire | cold | acid | electricity | sonic | force | positive | negative | nonlethal | bleed | typeless
+- tags: countsAsMagic; countsAsMaterial:[adamantine|silver|cold-iron]; countsAsAlignment:[good|evil|law|chaos]; countAsWeapon; source:[spell|trap|item]; school; descriptors; spellLevel
+
+AttackContext
+- mode: melee | ranged | touch | ray | special
+- attacker/weapon properties; crit state; precision damage flags; concealment/miss chance flags
+- metadata: material/alignment tags for DR/resist bypass
+
+Damage pipeline (default)
+1) Immunity: if matched by packet.type or descriptors → amount=0
+2) Conversion: convert/set type/tags as rules dictate
+3) Resistance/DR/pool
+   - Energy resist: reduce amount by resistance per packet
+   - DR: if packet is physical and attack does not bypass, reduce by DR value (engine policy: default per attack total physical damage; a per-packet policy is acceptable if consistent)
+   - Ablative pools: absorbIntoPool; decrement ResourceState.current
+4) Vulnerability: multiply remaining amount (default round down)
+5) Apply: subtract from HP (or to nonlethal per rules)
+6) Injury riders: if physical damage reduced to 0 by DR → negate injury-only riders
+7) Trigger post-damage hooks
+
+12) Condition
+A standardized effect primarily constraining actions and applying modifiers/rule hooks.
+
+- ConditionDefinition: standardized blueprint with id/name, tags, attached modifiers and hooks, precedence, default duration semantics
+- ConditionInstance: runtime attachment with owner, start time, remaining duration, parameters (e.g., DCs for ongoing saves)
+
+13) Choice
+Selections bound to an effect at learn-time, rest-time, or activation-time.
+
+Fields
+- domain: list or query constraints (e.g., one skill, one weapon, one stance, one soulmeld, one spell)
+- cardinality: pick 1 | N | repeatable
+- binding phase: learn-time (permanent), rest-time (rotating), use-time (activation), dynamic (essentia)
+- persistence: permanent, per-rest, per-activation, dynamic
+- validation: prerequisites per choice
+- binding result: parameters available as variables to modifiers/operations/rule hooks
+
+14) Zone / Hazard
+Zones are entities with area and hooks; they can attach effects or apply operations directly.
+
+Entity-level fields
+- shape: line | cone | burst | spread | emanation | cylinder | wall | sphere | cube; parameters (size/origin/orientation)
+- duration: as per effect attachment or zone policy
+- hooks: on-enter, on-leave, start/end-of-turn for occupants, suppression rules
+- ownership and stacking: zones can overlap; define policy for overlapping hooks and suppression
+
+Ability Types (default semantics)
+- Extraordinary (Ex): not dispellable; no SR; not suppressed in antimagic; does not provoke AoO by default
+- Supernatural (Su): not dispellable; no SR; suppressed in antimagic; does not provoke AoO by default
+- Spell-like (Sp): dispellable; SR applies; suppressed in antimagic; provokes AoO unless otherwise stated
+- Spell: dispellable; SR per spell entry; suppressed in antimagic; provokes AoO unless otherwise stated
+
+Targeting, Areas, and Filters
+- Target filters must be explicit (self, ally, enemy, creature, object; type/subtype; alignment; HD caps; size; LoS/LoE; distance; per-caster-level caps; count limits).
+- Multi-target and area selection follow range and shape rules.
+- Tie-breaking policy for selection among eligible targets is default-random unless specified.
+
+Timing and Scheduler
+- Durations: instantaneous, rounds, minutes, hours, days, permanent, concentration, special
+- Scheduling primitives:
+  - start/end of turn/round events
+  - recurring cadence (every N ticks apply operations)
+  - ongoing saves cadence (success/failure branches; policies like end/half/partial)
+  - delayed execution (queue operations for later)
+- Concentration: if effect requires concentration, the instance ends on concentration break (damage checks, etc.) per rules.
+- Suppression: effects can be paused (e.g., antimagic) without being dispelled; resume after suppression lifts.
+
+Stacking and Identity
+- Numeric stacking governed by bonusType:
+  - same type typically does not stack (take highest); dodge stacks with dodge; untyped stacks unless same sourceKey disallows
+- sourceKey identifies “same source does not stack with itself” cases
+- Named effect stacking policy: same named effect typically does not stack; either highest magnitude or latest overrides as per effect policy
+- Concurrent instances from different sources can coexist
+
+Defenses and Gating Semantics
+Immunity
+- Blocks effects, conditions, or damage packets matching its predicate (via rule hooks).
+
+Resistance
+- Reduces damage of a specific type per packet.
+
+Vulnerability
+- Multiplies damage taken for specific types.
+
+Damage Reduction (DR)
+- Reduces physical weapon damage unless bypass conditions met (material/alignment/weapon type/magic).
+- Global engine policy must be consistent (per attack total vs per packet).
+
+Spell Resistance (SR/PR)
+- Applies only to spells/Sp when spell entry says SR:Yes.
+- One CL check per casting/use per target.
+- If failed, the target ignores that instance of the effect.
+
+Antimagic
+- Suppresses Su/Sp/Spell effects; Ex unaffected.
+- Summoned/Sp-created entities wink out or suppress per rules; continuous items suppressed.
+- Special exclusions (wall of force, prismatic wall/sphere) per RAW.
+
+Globes and Wards
+- Zones with incoming.effect hooks that block spells up to a level threshold for targets inside.
+- In/Out origin interactions should be specified per ward definition.
+
+Transformations (polymorph/shapechange)
+- On application: set size, physical stats (STR/DEX/CON), NA, movement modes, senses, natural weapons, racial bonuses; retain mental stats and class features; apply equipment melding/usage rules; set tags
+- On end: restore original state; remove tags
+
+Event Catalog (common)
+- startOfTurn(entity), endOfTurn(entity), startOfRound, endOfRound
+- onAttackRollMade, onAttackRollHit, onCritConfirmed
+- onDamageDealt, onDamageTaken
+- onHit, onBeingHit
+- onKill, onKnockout
+- onCastSpell, onUsePower, onInitiateManeuver, onShapeSoulmeld, onBindChakra
+- onEnterArea(zone), onLeaveArea(zone)
+- onFailSave(saveType), onSucceedSave(saveType)
+- onResourceSpend(resourceId), onResourceDepleted(resourceId), onResourceRefreshed(resourceId)
+- onConditionApplied(conditionId), onConditionRemoved(conditionId)
+- suppressionApplied(effectInstance), suppressionLifted(effectInstance)
+
+Calculations and Expressions
+- Expressions may reference: ability_mod(STR/DEX/…); class_level(id); character_level; caster_level; initiator_level; HD; skill_ranks(skill); resource_amount(id); invested_essentia; tag counts; arithmetic; min/max/floor/ceil.
+- Rounding default: round down unless specified.
+- DCs, CL checks, capacity formulas, and derived stats should be expressed via these expressions for consistency.
+
+Order-of-Operations (canonical defaults)
+
+Effect activation (per effect)
+1) Validate prerequisites and legality: target eligibility, LoS/LoE, resource availability, immunities that block targeting
+2) Pay costs: spend resources/slots; set concentration if required
+3) Bind choices: learn-time/rest-time/use-time selections
+4) Select targets/area per range and filter
+5) For each target: SR Gate → Save Gate → Attack Gate → Resolution (execute operations; attach/detach instances; apply modifiers; register rule hooks; create resource states; schedule timers)
+6) Start durations; schedule recurring ticks and ongoing saves
+7) Suppression/Dispel handling: track abilityType for later checks; apply suppression where applicable
+8) Cleanup: on duration end, on leaving area, on dispel, on concentration break; detach instance; deregister hooks; expire owned ResourceStates
+
+Damage application (per effect/attack)
+1) Immunity
+2) Conversion
+3) Resistance/DR/pool absorption
+4) Vulnerability
+5) Apply to HP (or nonlethal per rules)
+6) Injury riders negation if physical damage reduced to 0 by DR
+7) Post-damage hooks
+
+Precedence and Conflict Resolution
+- Conditions precedence (recommended): dead > petrified > paralyzed > stunned > dazed > prone. Engine should define a canonical list; higher precedence constrains lower precedence behavior.
+- Multiple hooks targeting the same outcome: evaluate by priority, then last-in-wins if still tied.
+- Conflicting set/replace modifiers: apply defined precedence (highest magnitude | newest | source priority) as a global policy or per-effect policy.
+
+Authoring Guidelines
+- Prefer small, modular effects with clear modifiers and hooks over monolithic implementations.
+- Use consistent tags (school, descriptors, alignment, countsAs[material|alignment|magic], summoned, polymorph) to enable uniform defenses and hooks.
+- Model ablative defenses and limited uses via ResourceDefinitions/ResourceStates rather than bespoke counters.
+- Standardize ConditionDefinition and reuse across sources; avoid duplicating condition implementations under different names.
+- Make stacking explicit via bonusType and sourceKey; avoid implicit stacking.
+- Define filters and predicates explicitly; avoid ambiguous targeting.
+- Keep durations explicit; use recurring and ongoing_save constructs rather than ad hoc reapplication.
+
+Extensibility
+- New subsystems (e.g., Tome of Battle, Incarnum, Psionics) compose from: Resources + Rule Hooks + Modifiers + Operations + Choices.
+- New tags and expressions can be introduced without changing the core model.
+- Engine policies (e.g., DR per attack total vs per packet) must be globally consistent and documented.
+
+Compliance
+- Implementations should respect Ability Types defaults for SR/Antimagic/AoO, stacking rules for bonus types, SR and dispel semantics, and the order-of-operations defined here.
+- Where RAW is ambiguous, this spec provides defaults; deviations should be documented as engine policy.
+
+Blueprint vs Runtime Summary
+- Definitions (blueprints): EffectDefinition, ResourceDefinition, ConditionDefinition, and optionally Zone templates. These carry formulas, policies, tags, gates, and structure; they never hold live values.
+- Instances (runtime): EffectInstance, ResourceState, ConditionInstance, Zone entities. These carry current values, computed capacities (max_computed), durations, suppression flags, and scheduling data.
+- Effects declare ResourceDefinitions; activation creates ResourceStates as per scope and policy. Entities own the runtime ResourceStates and all changing state.
+
+This specification is intended to serve as a complete, minimal foundation for representing D&D 3.5e effects, defenses, resources, and state transitions in a consistent and composable way.
