@@ -58,6 +58,9 @@ class GameEngine:
             id="pc.hero", name=f"{name} ({race.title()} {cls.title()} 1)", level=1, size=Size.MEDIUM,
             abilities=ab, base_attack_bonus=bab, base_fort=fort, base_ref=ref, base_will=will,
             hp_max=max(1, hp_max), hp_current=max(1, hp_max),
+            classes={cls: 1},
+            caster_levels=({cls: 1} if cls in {"cleric","druid","wizard","sorcerer","bard"} else {}),
+            hd=1
         )
         # Apply kits
         for kit_id in kit_ids:

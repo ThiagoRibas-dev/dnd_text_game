@@ -28,6 +28,9 @@ def default_cleric_lvl1(content: ContentIndex) -> Entity:
         base_attack_bonus=0, base_fort=2, base_ref=0, base_will=2,
         hp_max=9, hp_current=9, speed_land=30, inventory=inv,
         equipment={"armor": chain_shirt.id, "shield": heavy_wooden_shield.id, "main_hand": mace.id},
+        classes={"cleric": 1},
+        caster_levels={"cleric": 1},
+        hd=1
     )
     return ent
 

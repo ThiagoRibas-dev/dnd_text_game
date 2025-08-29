@@ -133,6 +133,9 @@ class Entity(BaseModel):
     speed_land: int = 30
     inventory: List[Item] = Field(default_factory=list)
     equipment: Dict[str, str] = Field(default_factory=dict)  # "armor","shield","main_hand","off_hand","ranged"
+    classes: Dict[str, int] = Field(default_factory=dict)         # e.g., {"cleric": 1}
+    caster_levels: Dict[str, int] = Field(default_factory=dict)    # e.g., {"cleric": 1}
+    hd: Optional[int] = None  # total HD; if None, expressions use level
 
     def get_equipped(self, slot: str) -> Optional[Item]:
         iid = self.equipment.get(slot)
