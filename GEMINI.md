@@ -146,9 +146,9 @@ M1 — Project foundation and core models
     - [x] timeUnit ∈ {minutes,hours,days,weeks}; step > 0
     - [x] hooks limited to scope == "scheduler"; must specify events (eachStep, onStart, onComplete)
     - [x] progress/completion required shape; costs resource kinds enum (gp,xp,resource:<id>)
-  - [ ] ZoneDefinition tightening
-    - [ ] shape != none; duration rules (instant vs timed); hooks scopes limited to on-enter/on-leave/scheduler/incoming.effect
-    - [ ] suppression fields enum (antimagic, spell_globe:<=N, etc.)
+  - [x] ZoneDefinition tightening
+    - [x] shape != none; duration rules (instant vs timed); hooks scopes limited to on-enter/on-leave/scheduler/incoming.effect
+    - [x] suppression fields enum (antimagic, spell_globe:<=N, etc.)
   - [ ] Expression prevalidation
     - [ ] Parse all Expr fields at load; allowlist functions (min, max, floor, ceil, ability_mod, level, class_level, caster_level, initiator_level, hd)
     - [ ] Unknown symbols/functions produce validation errors under --strict-expr

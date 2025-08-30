@@ -2026,7 +2026,9 @@
             "on.maneuverGrant",
             "scheduler",
             "suppression",
-            "resource"
+            "resource",
+            "on.enter",
+            "on.leave"
           ],
           "title": "Scope",
           "type": "string"

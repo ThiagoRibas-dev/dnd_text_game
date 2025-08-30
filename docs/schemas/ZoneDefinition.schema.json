@@ -1698,7 +1698,9 @@
             "on.maneuverGrant",
             "scheduler",
             "suppression",
-            "resource"
+            "resource",
+            "on.enter",
+            "on.leave"
           ],
           "title": "Scope",
           "type": "string"
@@ -1828,6 +1830,35 @@
       ],
       "title": "RuleHook",
       "type": "object"
+    },
+    "ZoneSuppression": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "antimagic",
+            "spell_globe"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "max_spell_level": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Spell Level"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "ZoneSuppression",
+      "type": "object"
     }
   },
   "properties": {
@@ -1863,7 +1894,16 @@
     "stacking": {
       "anyOf": [
         {
-          "additionalProperties": true,
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
           "type": "object"
         },
         {
@@ -1876,15 +1916,13 @@
     "suppression": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/ZoneSuppression"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Suppression"
+      "default": null
     },
     "owner_tags": {
       "anyOf": [

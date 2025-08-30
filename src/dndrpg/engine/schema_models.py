@@ -378,9 +378,24 @@ HookAction = Annotated[
 ]
 
 # Rule Hooks (generic: match + actions)
-HookScope = Literal["targeting", "incoming.effect", "incoming.condition", "incoming.damage",
-                    "on.save", "on.attack", "on.damageDealt", "on.damageTaken", "on.crit",
-                    "on.maneuverGrant", "scheduler", "suppression", "resource"]
+HookScope = Literal[
+    "targeting",
+    "incoming.effect",
+    "incoming.condition",
+    "incoming.damage",
+    "on.save",
+    "on.attack",
+    "on.damageDealt",
+    "on.damageTaken",
+    "on.crit",
+    "on.maneuverGrant",
+    "scheduler",
+    "suppression",
+    "resource",
+    # NEW: zone-specific entry/exit scopes
+    "on.enter",
+    "on.leave"
+]
 
 class RuleHook(BaseModel):
     scope: HookScope
@@ -411,6 +426,12 @@ class RuleHook(BaseModel):
             "scheduler": ["save", "condition.apply", "condition.remove", "resource.spend", "resource.restore", "schedule"],
             "suppression": ["setOutcome", "suppress", "unsuppress", "dispel", "schedule"],
             "resource": ["setOutcome", "resource.spend", "resource.restore", "schedule"],
+            "on.enter": ["setOutcome", "save", "condition.apply", "condition.remove",
+                         "resource.create", "resource.spend", "resource.restore", "resource.set",
+                         "schedule", "dispel", "suppress", "unsuppress"],
+            "on.leave": ["setOutcome", "condition.apply", "condition.remove",
+                         "resource.create", "resource.spend", "resource.restore", "resource.set",
+                         "schedule"],
         }
         # Allowed set for this hook
         allow = set(allowed.get(self.scope, []))
@@ -425,6 +446,8 @@ class RuleHook(BaseModel):
             "on.crit": ["success", "failure"],
             "suppression": ["suppress", "unsuppress"],
             "resource": ["block", "allow"],
+            "on.enter": ["block", "allow", "suppress"],
+            "on.leave": ["block", "allow", "suppress"],
         }
 
         errs: List[str] = []
@@ -889,17 +912,78 @@ class TaskDefinition(BaseModel):
         return self
 
 
-# ZoneDefinition
+class ZoneSuppression(BaseModel):
+    kind: Literal["antimagic", "spell_globe"]
+    # For Minor Globe / Globe of Invulnerability style
+    max_spell_level: Optional[int] = None   # required for spell_globe
+
+    @model_validator(mode="after")
+    def _validate(self):
+        if self.kind == "spell_globe":
+            if self.max_spell_level is None or self.max_spell_level < 0:
+                raise ValueError("suppression.kind 'spell_globe' requires non-negative max_spell_level")
+        else:
+            # antimagic must not specify max_spell_level
+            if self.max_spell_level is not None:
+                raise ValueError("suppression.kind 'antimagic' must not specify max_spell_level")
+        return self
+
 class ZoneDefinition(BaseModel):
     id: str
     name: str
-    shape: AreaSpec
-    duration: Optional[DurationSpec] = None
-    hooks: List[RuleHook] = Field(default_factory=list)  # on-enter/on-leave/startOfTurn
-    stacking: Optional[Dict[str, Any]] = None
-    suppression: Optional[Dict[str, Any]] = None
+    shape: "AreaSpec"
+    duration: Optional["DurationSpec"] = None
+    hooks: List["RuleHook"] = Field(default_factory=list)  # only on.enter/on.leave/scheduler/incoming.effect
+    stacking: Optional[Dict[str, Union[str, int]]] = None
+    suppression: Optional[ZoneSuppression] = None
     owner_tags: Optional[List[str]] = None
     notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _validate_zone(self):
+        errs: list[str] = []
+        # shape != none
+        if self.shape is None or self.shape.shape == "none":
+            errs.append("Zone shape must not be 'none'")
+
+        # duration required; zones are either timed or permanent/special; concentration belongs to the creating effect
+        if self.duration is None:
+            errs.append("Zone duration is required (use 'permanent' or 'special' if indefinite)")
+        else:
+            if self.duration.type == "concentration":
+                errs.append("Zone duration cannot be 'concentration' (model concentration on the creating EffectDefinition)")
+
+            # Instantaneous zones cannot have scheduler hooks
+            if self.duration.type == "instantaneous":
+                for h in self.hooks:
+                    if h.scope == "scheduler":
+                        errs.append("Instantaneous zones must not have 'scheduler' hooks")
+
+        # Hook scopes limited set + scheduler events required/validated
+        allowed_scopes = {"on.enter", "on.leave", "scheduler", "incoming.effect"}
+        for h in self.hooks:
+            if h.scope not in allowed_scopes:
+                errs.append(f"Zone hook scope '{h.scope}' not allowed; allowed: {sorted(allowed_scopes)}")
+                continue
+            if h.scope == "scheduler":
+                ev = None
+                if isinstance(h.match, dict):
+                    ev = h.match.get("event")
+                if not isinstance(ev, str):
+                    errs.append("Zone scheduler hook requires match.event")
+                else:
+                    # allow exact or prefixed forms
+                    allowed_exact = {"startOfTurn", "endOfTurn", "eachRound"}
+                    allowed_prefixes = ("startOfTurn", "endOfTurn")
+                    if ev in allowed_exact or any(ev.startswith(pfx) for pfx in allowed_prefixes):
+                        pass
+                    else:
+                        errs.append(f"Zone scheduler match.event must be one of {sorted(allowed_exact)} "
+                                    f"(or prefixed 'startOfTurn(...)'/'endOfTurn(...)'); got {ev!r}")
+
+        if errs:
+            raise ValueError("; ".join(errs))
+        return self
 
 ActModify.model_rebuild()
 ActReroll.model_rebuild()
@@ -920,3 +1004,5 @@ TaskCost.model_rebuild()
 ProgressSpec.model_rebuild()
 CompletionSpec.model_rebuild()
 TaskDefinition.model_rebuild()
+ZoneSuppression.model_rebuild()
+ZoneDefinition.model_rebuild()
