@@ -565,6 +565,7 @@
           "default": null
         },
         "params": {
+          "additionalProperties": true,
           "title": "Params",
           "type": "object"
         },
@@ -1534,6 +1535,7 @@
         "set_stats": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -1702,6 +1704,7 @@
           "type": "string"
         },
         "match": {
+          "additionalProperties": true,
           "title": "Match",
           "type": "object"
         },
@@ -1809,6 +1812,7 @@
         "duration": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -1859,6 +1863,7 @@
     "stacking": {
       "anyOf": [
         {
+          "additionalProperties": true,
           "type": "object"
         },
         {
@@ -1871,6 +1876,7 @@
     "suppression": {
       "anyOf": [
         {
+          "additionalProperties": true,
           "type": "object"
         },
         {

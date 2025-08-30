@@ -544,6 +544,7 @@
               "type": "number"
             },
             {
+              "additionalProperties": true,
               "type": "object"
             }
           ],
@@ -595,6 +596,7 @@
         "conditions": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -607,6 +609,7 @@
         "durationOverride": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -619,6 +622,7 @@
         "flags": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -695,6 +699,7 @@
           "default": null
         },
         "params": {
+          "additionalProperties": true,
           "title": "Params",
           "type": "object"
         },
@@ -1664,6 +1669,7 @@
         "set_stats": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -1832,6 +1838,7 @@
           "type": "string"
         },
         "match": {
+          "additionalProperties": true,
           "title": "Match",
           "type": "object"
         },
@@ -1939,6 +1946,7 @@
         "duration": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -1967,6 +1975,44 @@
     },
     "tags": {
       "items": {
+        "enum": [
+          "blinded",
+          "blown_away",
+          "checked",
+          "confused",
+          "cowering",
+          "dazed",
+          "dazzled",
+          "dead",
+          "deafened",
+          "disabled",
+          "dying",
+          "energy_drained",
+          "entangled",
+          "exhausted",
+          "fascinated",
+          "fatigued",
+          "flat_footed",
+          "frightened",
+          "grappling",
+          "helpless",
+          "incorporeal",
+          "invisible",
+          "knocked_down",
+          "nauseated",
+          "panicked",
+          "paralyzed",
+          "petrified",
+          "pinned",
+          "prone",
+          "shaken",
+          "sickened",
+          "stable",
+          "staggered",
+          "stunned",
+          "turned",
+          "unconscious"
+        ],
         "type": "string"
       },
       "title": "Tags",

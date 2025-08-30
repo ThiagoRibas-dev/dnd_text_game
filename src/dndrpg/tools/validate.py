@@ -40,6 +40,9 @@ def validate_content(content_dir: Path = typer.Argument(Path("src/dndrpg/content
         ("tasks", TypeAdapter(TaskDefinition)),
         ("zones", TypeAdapter(ZoneDefinition)),
     ]
+
+    # First pass: schema-validate each file
+    parsed: dict[str, list] = {k: [] for k, _ in groups}
     for sub, adapter in groups:
         folder = content_dir / sub
         if not folder.exists():
@@ -47,10 +50,26 @@ def validate_content(content_dir: Path = typer.Argument(Path("src/dndrpg/content
         for fp in _iter(folder):
             data = _load(fp)
             try:
-                adapter.validate_python(data)
+                obj = adapter.validate_python(data)
+                parsed[sub].append((fp, obj))
             except ValidationError as e:
                 ok = False
                 typer.echo(f"[ERROR] {fp}: {e}", err=True)
+
+    # Second pass: cross-file lints/checks
+    # A) Condition precedence must be unique (ignoring None)
+    precedences: dict[int, list[str]] = {}
+    for fp, cond in parsed.get("conditions", []):
+        prec = getattr(cond, "precedence", None)
+        if prec is None:
+            continue
+        precedences.setdefault(prec, []).append(getattr(cond, "id", str(fp)))
+    dups = {p: ids for p, ids in precedences.items() if len(ids) > 1}
+    if dups:
+        ok = False
+        for p, ids in dups.items():
+            typer.echo(f"[ERROR] Condition precedence '{p}' is used by multiple conditions: {', '.join(ids)}", err=True)
+
     if not ok:
         raise typer.Exit(code=1)
     typer.echo("Content validated successfully.")

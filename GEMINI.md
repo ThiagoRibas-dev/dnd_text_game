@@ -21,7 +21,7 @@ A central "Mode Manager" handles transitions between these states. The game will
 
 **Editing Files:** Avoid trying to avoid whole files at once. Edit specific, directed snippets at a time.
 
-**Ruff Linter:** An is an extremely fast Python linter and code formatter. After performing a batch of changes, we will always run `ruff check . --fix` to ensure things are in order.
+**Ruff Linter:** After performing a batch of changes, always run `ruff check . --fix` to ensure things are in order.
 
 **Running the Game:** Use the command `uv run python -m dndrpg`.
 
@@ -135,8 +135,8 @@ M1 — Project foundation and core models
     - [x] targetPath allowlist prefixes (abilities.*, ac.*, save.*, resist.*, dr.*, speed.*, senses.*, tags.*, resources.*)
     - [x] Require bonusType for additive stat bonuses where applicable; forbid invalid operator+target combos
     - [x] Deprecate replaceFormula; prefer set or replace with typed fields
-  - [ ] ConditionDefinition tightening
-    - [ ] tags enum (blinded, stunned, prone, etc.); precedence unique; default_duration must be allowed combos
+  - [x] ConditionDefinition tightening
+    - [x] tags enum (blinded, stunned, prone, etc.); precedence unique; default_duration must be allowed combos
   - [ ] ResourceDefinition tightening
     - [ ] capacity.formula required; capacity.cap >= 0
     - [ ] refresh.behavior == "increment_by" → require increment_by

@@ -22,6 +22,16 @@ ComputeAt = Literal["attach", "refresh", "query"]
 Visibility = Literal["public", "private", "hidden"]
 GateBranch = Literal["negates", "half", "partial", "none"]
 
+# Canonical condition tags (from 3.5e Conditions section)
+ConditionTag = Literal[
+    "blinded","blown_away","checked","confused","cowering","dazed","dazzled",
+    "dead","deafened","disabled","dying","energy_drained","entangled","exhausted",
+    "fascinated","fatigued","flat_footed","frightened","grappling","helpless",
+    "incorporeal","invisible","knocked_down","nauseated","panicked","paralyzed",
+    "petrified","pinned","prone","shaken","sickened","stable","staggered","stunned",
+    "turned","unconscious"
+]
+
 # Modifiers
 ModifierOperator = Literal[
     "add","subtract","multiply","divide","set","min","max","replace","replaceFormula","cap","clamp","grantTag","removeTag","convertType"
@@ -680,12 +690,50 @@ class EffectDefinition(BaseModel):
 class ConditionDefinition(BaseModel):
     id: str
     name: str
-    tags: List[str] = Field(default_factory=list)
+    # Only canonical tags allowed; optional but constrained
+    tags: List[ConditionTag] = Field(default_factory=list)
+    # Higher number = higher precedence (engine will document the ordering policy)
     precedence: Optional[int] = None
-    default_duration: Optional[DurationSpec] = None
-    modifiers: List[Modifier] = Field(default_factory=list)
-    ruleHooks: List[RuleHook] = Field(default_factory=list)
+
+    # Optional default duration; used when an effect applies the condition with no explicit duration
+    default_duration: Optional["DurationSpec"] = None
+
+    modifiers: List["Modifier"] = Field(default_factory=list)
+    ruleHooks: List["RuleHook"] = Field(default_factory=list)
     notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _validate_default_duration(self):
+        dd = self.default_duration
+        if dd is None:
+            return self
+        # Disallow concentration for conditions’ defaults (it’s a property of effects, not conditions)
+        if dd.type == "concentration":
+            raise ValueError("Condition default_duration cannot be 'concentration'; model concentration on the applying effect")
+
+        # Instantaneous: no explicit duration value/formula required (and should not be provided)
+        if dd.type == "instantaneous":
+            if dd.value is not None or dd.formula is not None:
+                raise ValueError("default_duration 'instantaneous' must not specify value or formula")
+            return self
+
+        # Permanent: no numeric duration
+        if dd.type == "permanent":
+            if dd.value is not None or dd.formula is not None:
+                raise ValueError("default_duration 'permanent' must not specify value or formula")
+            return self
+
+        # Timed durations: require either a value (>0) or a formula
+        if dd.type in ("rounds", "minutes", "hours", "days"):
+            if dd.value is None and dd.formula is None:
+                raise ValueError(f"default_duration '{dd.type}' requires value or formula")
+            if dd.value is not None and dd.value <= 0:
+                raise ValueError(f"default_duration '{dd.type}' value must be > 0 when provided")
+            return self
+
+        # 'special' is allowed, but strongly prefer effects to manage special end conditions
+        # (No extra checks here; leave to runtime/authoring guidelines)
+        return self
 
 # ResourceDefinition
 class ResourceRefresh(BaseModel):
@@ -745,3 +793,4 @@ ActAbsorbIntoPool.model_rebuild()
 ActSetOutcome.model_rebuild()
 HookAction.__args__  # no-op to keep linters quiet
 RuleHook.model_rebuild()
+ConditionDefinition.model_rebuild()

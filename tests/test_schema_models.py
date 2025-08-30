@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from dndrpg.engine.schema_models import Modifier, Expr
+from dndrpg.engine.schema_models import Modifier
 
 def test_modifier_prefix_allowlist():
     with pytest.raises(ValidationError):
