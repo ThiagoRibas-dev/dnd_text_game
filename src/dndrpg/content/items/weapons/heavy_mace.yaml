@@ -1,3 +1,4 @@
+schema_version: 1
 type: weapon
 id: wp.mace.heavy
 name: Heavy Mace

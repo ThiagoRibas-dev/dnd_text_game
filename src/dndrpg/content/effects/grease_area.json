@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "id": "spell.grease.square",
   "name": "Grease (Area)",
   "abilityType": "Spell",

@@ -1,3 +1,4 @@
+schema_version: 1
 id: camp.srd_sandbox
 name: SRD Sandbox
 description: A system-reference solo sandbox with SRD content.

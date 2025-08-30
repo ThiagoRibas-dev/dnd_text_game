@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "id": "spell.divine_power",
   "name": "Divine Power",
   "source": "spell",

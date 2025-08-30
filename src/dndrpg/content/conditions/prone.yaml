@@ -1,0 +1,8 @@
+schema_version: 1
+id: cond.prone
+name: Prone
+tags:
+  - prone
+modifiers: []
+ruleHooks: []
+notes: "A prone creature is lying on the ground."

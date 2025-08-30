@@ -1,15 +1,18 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import Dict, List
+from typing_extensions import Annotated
+
+IDStr = Annotated[str, Field(pattern=r"^[a-z0-9_.:-]+$")]
 
 class StartingKit(BaseModel):
-    id: str
+    id: IDStr
     name: str
     items: List[str] = Field(default_factory=list)
     auto_equip: Dict[str, str] = Field(default_factory=dict)  # slot -> item id
 
 class CampaignDefinition(BaseModel):
-    id: str
+    id: IDStr
     name: str
     description: str = ""
     start_area: str = "overworld"

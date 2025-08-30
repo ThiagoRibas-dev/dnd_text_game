@@ -14,6 +14,75 @@ from dndrpg.engine.loader import ItemAdapter, CampaignAdapter, KitAdapter
 from collections import defaultdict
 
 
+# Linting and error reporting
+class LintCounters:
+    def __init__(self):
+        self.errors = 0
+        self.warnings = 0
+
+def emit_error(msg: str, counters: LintCounters):
+    typer.echo(f"[ERROR] {msg}", err=True)
+    counters.errors += 1
+
+def emit_warn(msg: str, counters: LintCounters):
+    typer.echo(f"[WARN] {msg}")
+    counters.warnings += 1
+
+
+CURRENT_SCHEMA_VERSION = "1"  # bump when schemas change incompatibly
+
+# Allowed namespace prefixes by content group
+PREFIXES = {
+    "effects": {"spell.", "feat."},  # extend later as needed: "power.","maneuver.","stance.","soulmeld.","binding.","class.","race.","item.","other."
+    "conditions": {"cond."},
+    "resources": {"res."},
+    "tasks": {"task."},
+    "zones": {"zone."},
+    "items": {"item.", "wp.", "ar.", "sh.", "it."},  # accept legacy 'wp./ar./sh./it.'; prefer 'item.' (warn)
+    "kits": {"kit."},
+    "campaigns": {"camp."},
+}
+
+def _enforce_prefix(id_value: str, group: str, strict: bool, counters: LintCounters, file_path: str):
+    allowed = PREFIXES.get(group, set())
+    if not allowed:
+        return
+    if not any(id_value.startswith(p) for p in allowed):
+        emit_error(f"{file_path}: id '{id_value}' must start with one of {sorted(allowed)}", counters)
+        return
+    # Soft preference: items should slowly converge to 'item.' prefix
+    if group == "items" and strict and not id_value.startswith("item."):
+        emit_warn(f"{file_path}: id '{id_value}' uses legacy prefix; prefer 'item.'", counters)
+
+def _check_schema_version(raw: dict, file_path: str, strict: bool, counters: LintCounters):
+    sv = raw.get("schema_version", None)
+    if sv is None:
+        msg = f"{file_path}: missing top-level 'schema_version' (expected '{CURRENT_SCHEMA_VERSION}')"
+        if strict:
+            emit_error(msg, counters)
+        else:
+            emit_warn(msg, counters)
+        return
+    # normalize to string
+    sv_str = str(sv)
+    if sv_str != CURRENT_SCHEMA_VERSION:
+        msg = f"{file_path}: schema_version '{sv_str}' != expected '{CURRENT_SCHEMA_VERSION}'"
+        if strict:
+            emit_error(msg, counters)
+        else:
+            emit_warn(msg, counters)
+
+MIGRATIONS = {
+    # Example: ("0", "1"): callable
+    # ("0", "1"): migrate_0_to_1,
+}
+
+def _maybe_migrate_in_place(data: dict, src_version: str) -> dict:
+    # Placeholder for future migrations
+    # e.g., rename keys, move from old op shapes to typed union
+    return data
+
+
 # Expression validation config
 ALLOWED_FUNCTIONS = {
     "min", "max", "floor", "ceil",
@@ -209,10 +278,14 @@ def export_schemas_cmd(out: Path = typer.Option(Path("docs/schemas"), "--out")):
 @app.command("validate-content")
 def validate_content(
     content_dir: Path = typer.Argument(Path("src/dndrpg/content")),
-    strict_expr: bool = typer.Option(False, "--strict-expr", help="Disallow unknown functions and suspicious symbols in expressions"),
-    warn_unused: bool = typer.Option(False, "--warn-unused", help="Warn on unused content ids")
+    strict: bool = typer.Option(False, "--strict", help="Strict mode: schema + strict expressions + cross-refs + id policy + version; warnings do not fail"),
+    warn_unused: bool = typer.Option(False, "--warn-unused", help="Also warn on unused ids (implied by --strict)")
 ):
-    ok = True
+    strict_expr = strict
+    if strict:
+        warn_unused = True
+
+    counters = LintCounters()
     groups = [
         ("effects", TypeAdapter(EffectDefinition)),
         ("conditions", TypeAdapter(ConditionDefinition)),
@@ -225,30 +298,47 @@ def validate_content(
     ]
 
     parsed: dict[str, list] = {k: [] for k, _ in groups}
+    total_files = 0
 
-    # 1) Per-file schema + expr validation
+    # 1) Per-file typing + expr + id prefix + schema_version
     for sub, adapter in groups:
         folder = content_dir / sub
         if not folder.exists():
             continue
         for fp in _iter(folder):
+            total_files += 1
             data = _load(fp)
+            # id prefix and schema_version checks happen regardless of schema pass/fail (give more feedback)
+            rid = data.get("id")
+            if isinstance(rid, str):
+                _enforce_prefix(rid, sub, strict, counters, str(fp))
+            _check_schema_version(data, str(fp), strict, counters)
+
+            # Migration hook (if implemented)
+            sv_raw = data.get("schema_version")
+            if sv_raw is not None and str(sv_raw) != CURRENT_SCHEMA_VERSION:
+                data = _maybe_migrate_in_place(data, str(sv_raw))
+
+            # Migration hook (if implemented)
+            sv_raw = data.get("schema_version")
+            if sv_raw is not None and str(sv_raw) != CURRENT_SCHEMA_VERSION:
+                data = _maybe_migrate_in_place(data, str(sv_raw))
+
+            # schema typing
             try:
                 obj = adapter.validate_python(data)
                 parsed[sub].append((fp, obj, data))
             except ValidationError as e:
-                ok = False
-                typer.echo(f"[ERROR] {fp}: {e}", err=True)
+                emit_error(f"{fp}: {e}", counters)
                 continue
-            # Expressions in raw tree
-            expr_errs = _walk_exprs(data, file_path=str(fp), prefix=sub, strict=strict_expr)
-            if expr_errs:
-                ok = False
-                for msg in expr_errs:
-                    typer.echo(f"[ERROR] {msg}", err=True)
 
-    # 2) Cross-reference collection
-    defined: dict[str, Set[str]] = {
+            # expressions
+            expr_errs = _walk_exprs(data, file_path=str(fp), prefix=sub, strict=strict_expr)
+            for msg in expr_errs:
+                emit_error(msg, counters)
+
+    # 2) Cross-refs (as in your previous step)
+    defined: dict[str, set[str]] = {
         "effect": {getattr(o, "id") for _, o, _ in parsed["effects"]},
         "condition": {getattr(o, "id") for _, o, _ in parsed["conditions"]},
         "resource": {getattr(o, "id") for _, o, _ in parsed["resources"]},
@@ -260,7 +350,6 @@ def validate_content(
     }
     refs: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
 
-    # Collect refs from each content kind (raw dicts)
     for fp, _o, raw in parsed["effects"]:
         _collect_refs_from_effect(raw, str(fp), refs)
     for fp, _o, raw in parsed["zones"]:
@@ -272,44 +361,39 @@ def validate_content(
     for fp, _o, raw in parsed["campaigns"]:
         _collect_refs_from_campaign(raw, str(fp), refs)
 
-    # 3) Missing references (errors)
     def _report_missing(cat: str):
-        nonlocal ok
         used = refs.get(cat, {})
         missing = set(used.keys()) - defined.get(cat, set())
         for mid in sorted(missing):
             locs = ", ".join(sorted(used[mid]))
-            typer.echo(f"[ERROR] Missing {cat} id '{mid}' referenced from: {locs}", err=True)
-            ok = False
+            emit_error(f"Missing {cat} id '{mid}' referenced from: {locs}", counters)
 
     for cat in ("condition","resource","zone","effect","item","kit"):
         _report_missing(cat)
 
-    # 4) Unused ids (warnings only if enabled)
+    # Unused warnings
     if warn_unused:
         for cat in ("effect","condition","resource","zone","item","kit","campaign","task"):
             defined_set = defined.get(cat, set())
             used_set = set(refs.get(cat, {}).keys())
-            unused = sorted(defined_set - used_set)
-            for uid in unused:
-                typer.echo(f"[WARN] Unused {cat} id: {uid}")
+            for uid in sorted(defined_set - used_set):
+                emit_warn(f"Unused {cat} id: {uid}", counters)
 
-    # 5) Existing cross-file checks (e.g., precedence uniqueness)
+    # 3) Cross-file checks: condition precedence uniqueness
     precedences: dict[int, list[str]] = {}
     for fp, cond, _raw in parsed.get("conditions", []):
         prec = getattr(cond, "precedence", None)
         if prec is None:
             continue
         precedences.setdefault(prec, []).append(getattr(cond, "id", str(fp)))
-    dups = {p: ids for p, ids in precedences.items() if len(ids) > 1}
-    if dups:
-        ok = False
-        for p, ids in dups.items():
-            typer.echo(f"[ERROR] Condition precedence '{p}' is used by multiple conditions: {', '.join(ids)}", err=True)
+    for p, ids in precedences.items():
+        if len(ids) > 1:
+            emit_error(f"Condition precedence '{p}' is used by multiple conditions: {', '.join(ids)}", counters)
 
-    if not ok:
+    # 4) Summary / exit code
+    typer.echo(f"Validated {total_files} content files — {counters.errors} error(s), {counters.warnings} warning(s).")
+    if counters.errors > 0:
         raise typer.Exit(code=1)
-    typer.echo("Content validated successfully.")
 
 # Map a file path to its adapter based on subfolder
 TYPE_MAP = {

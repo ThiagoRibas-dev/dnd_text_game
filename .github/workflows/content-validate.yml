@@ -1,22 +1,14 @@
-name: CI — Validate Content
+name: CI — Validate Content & Tests
 
 on:
   pull_request:
     branches: [ "**" ]
   push:
     branches: [ main ]
-  # (Optional) run only when content or schema tooling changes:
-  # pull_request:
-  #   paths:
-  #     - "src/dndrpg/content/**"
-  #     - "src/dndrpg/engine/schema_models.py"
-  #     - "src/dndrpg/tools/**"
-  #     - "pyproject.toml"
 
 jobs:
-  validate-content:
+  validate-and-test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,15 +26,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install package (with dev extras)
+      - name: Install (dev)
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
-      # Option A: Use console script (if [project.scripts] dndrpg-tools is defined)
-      - name: Validate content (CLI)
-        run: dndrpg-tools validate-content
+      - name: Export schemas (check docs up to date)
+        run: |
+          python -m dndrpg.tools.validate export-schemas --out .schemas_tmp
+          if ! diff -qr .schemas_tmp docs/schemas ; then
+            echo "::warning::Schema docs differ from generated (update docs/schemas if intended)."
+          fi
 
-      # Option B (fallback): Use module invocation without console script
-      # - name: Validate content (module)
-      #   run: python -m dndrpg.tools.validate validate-content
+      - name: Validate content (strict)
+        run: dndrpg-tools validate-content --strict
+
+      - name: Run tests
+        run: pytest -q

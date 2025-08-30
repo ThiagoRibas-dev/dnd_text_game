@@ -155,12 +155,12 @@ M1 — Project foundation and core models
   - [x] Cross-reference validation
     - [x] Verify references exist: condition ids, resource ids, zone ids, item ids, kit ids, effect ids
     - [x] Warn on unused content ids
-  - [ ] ID policy & versioning
-    - [ ] Enforce id regex ^[a-z0-9_.:-]+$ and namespace prefixes (spell., feat., cond., res., zone., task., kit., item.)
-    - [ ] schema_version in files; migration hooks documented
-  - [ ] CLI & CI
-    - [ ] dndrpg-tools validate-content --strict (expr + refs + typing) in CI
-    - [ ] Lint output with warnings vs errors; fail on errors only
+  - [x] ID policy & versioning
+    - [x] Enforce id regex ^[a-z0-9_.:-]+$ and namespace prefixes (spell., feat., cond., res., zone., task., kit., item.)
+    - [x] schema_version in files; migration hooks documented
+  - [x] CLI & CI
+    - [x] dndrpg-tools validate-content --strict (expr + refs + typing) in CI
+    - [x] Lint output with warnings vs errors; fail on errors only
 
 Acceptance: Can load a player, stats compute correctly, content files validate, and tests run green.
 

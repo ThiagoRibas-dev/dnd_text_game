@@ -1,3 +1,4 @@
+schema_version: 1
 id: zone.grease.square
 name: Grease (Area)
 shape: { shape: square, size_ft: 10 }

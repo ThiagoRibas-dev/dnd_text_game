@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Literal, Optional, Union, Tuple
 from typing_extensions import Annotated
 from pydantic import BaseModel, Field, AliasChoices, model_validator
 
+IDStr = Annotated[str, Field(pattern=r"^[a-z0-9_.:-]+$")]
+
 # Common aliases
 Expr = Union[str, int, float]  # expressions or numeric literals
 
@@ -632,7 +634,7 @@ class StackingPolicy(BaseModel):
 
 # EffectDefinition
 class EffectDefinition(BaseModel):
-    id: str
+    id: IDStr
     name: str
     source: SourceType = "spell"
     abilityType: AbilityType = "Spell"
@@ -711,7 +713,7 @@ class EffectDefinition(BaseModel):
 
 # ConditionDefinition
 class ConditionDefinition(BaseModel):
-    id: str
+    id: IDStr
     name: str
     # Only canonical tags allowed; optional but constrained
     tags: List[ConditionTag] = Field(default_factory=list)
@@ -820,7 +822,7 @@ class AbsorptionSpec(BaseModel):
         return self
 
 class ResourceDefinition(BaseModel):
-    id: str
+    id: IDStr
     name: Optional[str] = None
     scope: ScopeType = "entity"                # enforced by enum
     capacity: CapacitySpec                     # REQUIRED
@@ -875,7 +877,7 @@ class CompletionSpec(BaseModel):
         return self
 
 class TaskDefinition(BaseModel):
-    id: str
+    id: IDStr
     name: str
     timeUnit: Literal["minutes", "hours", "days", "weeks"]
     step: int  # tick size in timeUnit (>0)
@@ -929,7 +931,7 @@ class ZoneSuppression(BaseModel):
         return self
 
 class ZoneDefinition(BaseModel):
-    id: str
+    id: IDStr
     name: str
     shape: "AreaSpec"
     duration: Optional["DurationSpec"] = None

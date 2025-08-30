@@ -2,6 +2,9 @@ from __future__ import annotations
 from typing import Optional, Literal, List, Dict, Set
 from enum import Enum
 from pydantic import BaseModel, Field, computed_field
+from typing_extensions import Annotated
+
+IDStr = Annotated[str, Field(pattern=r"^[a-z0-9_.:-]+$")]
 
 class Size(str, Enum):
     FINE = "Fine"
@@ -34,7 +37,7 @@ class Handedness(str, Enum):
 DamageType = Literal["bludgeoning","piercing","slashing"]
 
 class Item(BaseModel):
-    id: str
+    id: IDStr
     name: str
     type: Literal["item"] = "item"
     weight_lb: float = 0.0
