@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import re
-from typing import List
+from typing import List, Dict, Set, Literal
 import yaml
 import typer
 from py_expression_eval import Parser
@@ -10,6 +10,9 @@ from pydantic import TypeAdapter, ValidationError
 from dndrpg.engine.schema_models import (
     EffectDefinition, ConditionDefinition, ResourceDefinition, TaskDefinition, ZoneDefinition
 )
+from dndrpg.engine.loader import ItemAdapter, CampaignAdapter, KitAdapter
+from collections import defaultdict
+
 
 # Expression validation config
 ALLOWED_FUNCTIONS = {
@@ -99,6 +102,89 @@ def _walk_exprs(data: object, *, file_path: str, prefix: str, strict: bool) -> l
             errs.extend(_walk_exprs(item, file_path=file_path, prefix=path, strict=strict))
     return errs
 
+RefCats = Literal["effect","condition","resource","zone","item","kit","campaign","task"]
+
+def _add_ref(refmap: Dict[str, Dict[str, Set[str]]], cat: str, rid: str, file_path: str):
+    if not isinstance(rid, str) or not rid:
+        return
+    refmap.setdefault(cat, {}).setdefault(rid, set()).add(file_path)
+
+# Walk operations/actions in raw dicts (handles nested schedules and save branches)
+def _collect_refs_from_op_dict(node: object, refmap: Dict[str, Dict[str, Set[str]]], file_path: str):
+    if isinstance(node, dict):
+        op = node.get("op")
+        if isinstance(op, str):
+            if op == "condition.apply":
+                cid = node.get("id") or (node.get("params") or {}).get("id")
+                _add_ref(refmap, "condition", cid, file_path)
+            elif op in ("resource.create","resource.spend","resource.restore","resource.set"):
+                rid = node.get("resource_id") or (node.get("params") or {}).get("resource_id")
+                _add_ref(refmap, "resource", rid, file_path)
+            elif op == "zone.create":
+                zid = node.get("zone_id") or (node.get("params") or {}).get("zone_id")
+                if zid:
+                    _add_ref(refmap, "zone", zid, file_path)
+            elif op == "zone.destroy":
+                zid = node.get("zone_id")  # instance ids are runtime; only check definition refs
+                if zid:
+                    _add_ref(refmap, "zone", zid, file_path)
+            elif op in ("attach","detach"):
+                eid = node.get("effect_id")
+                _add_ref(refmap, "effect", eid, file_path)
+            elif op == "save":
+                for branch_key in ("on_fail","onFail","on_success","onSuccess"):
+                    for action in (node.get(branch_key) or []):
+                        _collect_refs_from_op_dict(action, refmap, file_path)
+            elif op == "schedule":
+                for action in (node.get("actions") or []):
+                    _collect_refs_from_op_dict(action, refmap, file_path)
+        # Recurse into nested containers
+        for v in node.values():
+            if isinstance(v, (dict, list)):
+                _collect_refs_from_op_dict(v, refmap, file_path)
+    elif isinstance(node, list):
+        for item in node:
+            _collect_refs_from_op_dict(item, refmap, file_path)
+
+def _collect_refs_from_effect(raw: dict, file_path: str, refmap: Dict[str, Dict[str, Set[str]]]):
+    for op in raw.get("operations", []) or []:
+        _collect_refs_from_op_dict(op, refmap, file_path)
+    for hook in raw.get("ruleHooks", []) or []:
+        for action in hook.get("action", []) or []:
+            _collect_refs_from_op_dict(action, refmap, file_path)
+
+def _collect_refs_from_zone(raw: dict, file_path: str, refmap: Dict[str, Dict[str, Set[str]]]):
+    for hook in raw.get("hooks", []) or []:
+        for action in hook.get("action", []) or []:
+            _collect_refs_from_op_dict(action, refmap, file_path)
+
+def _collect_refs_from_task(raw: dict, file_path: str, refmap: Dict[str, Dict[str, Set[str]]]):
+    # Costs referencing resources
+    for cost in raw.get("costs", []) or []:
+        if cost.get("kind") == "resource":
+            _add_ref(refmap, "resource", cost.get("resource_id"), file_path)
+    # Hooks/actions
+    for hook in raw.get("hooks", []) or []:
+        for action in hook.get("action", []) or []:
+            _collect_refs_from_op_dict(action, refmap, file_path)
+    # Completion actions
+    comp = raw.get("completion") or {}
+    for action in comp.get("actions", []) or []:
+        _collect_refs_from_op_dict(action, refmap, file_path)
+
+def _collect_refs_from_kit(raw: dict, file_path: str, refmap: Dict[str, Dict[str, Set[str]]]):
+    for iid in raw.get("items", []) or []:
+        _add_ref(refmap, "item", iid, file_path)
+    for slot, iid in (raw.get("auto_equip") or {}).items():
+        if isinstance(iid, str):
+            _add_ref(refmap, "item", iid, file_path)
+
+def _collect_refs_from_campaign(raw: dict, file_path: str, refmap: Dict[str, Dict[str, Set[str]]]):
+    packs = raw.get("starting_equipment_packs") or {}
+    for _cls, kit_ids in packs.items():
+        for kid in kit_ids or []:
+            _add_ref(refmap, "kit", kid, file_path)
+
 app = typer.Typer(add_completion=False)
 
 def _load(path: Path) -> dict:
@@ -123,7 +209,8 @@ def export_schemas_cmd(out: Path = typer.Option(Path("docs/schemas"), "--out")):
 @app.command("validate-content")
 def validate_content(
     content_dir: Path = typer.Argument(Path("src/dndrpg/content")),
-    strict_expr: bool = typer.Option(False, "--strict-expr", help="Disallow unknown functions and suspicious symbols in expressions")
+    strict_expr: bool = typer.Option(False, "--strict-expr", help="Disallow unknown functions and suspicious symbols in expressions"),
+    warn_unused: bool = typer.Option(False, "--warn-unused", help="Warn on unused content ids")
 ):
     ok = True
     groups = [
@@ -132,16 +219,20 @@ def validate_content(
         ("resources", TypeAdapter(ResourceDefinition)),
         ("tasks", TypeAdapter(TaskDefinition)),
         ("zones", TypeAdapter(ZoneDefinition)),
+        ("items", ItemAdapter),
+        ("kits", KitAdapter),
+        ("campaigns", CampaignAdapter),
     ]
 
     parsed: dict[str, list] = {k: [] for k, _ in groups}
+
+    # 1) Per-file schema + expr validation
     for sub, adapter in groups:
         folder = content_dir / sub
         if not folder.exists():
             continue
         for fp in _iter(folder):
             data = _load(fp)
-            # 1) Schema validation
             try:
                 obj = adapter.validate_python(data)
                 parsed[sub].append((fp, obj, data))
@@ -149,14 +240,61 @@ def validate_content(
                 ok = False
                 typer.echo(f"[ERROR] {fp}: {e}", err=True)
                 continue
-            # 2) Expression prevalidation
+            # Expressions in raw tree
             expr_errs = _walk_exprs(data, file_path=str(fp), prefix=sub, strict=strict_expr)
             if expr_errs:
                 ok = False
                 for msg in expr_errs:
                     typer.echo(f"[ERROR] {msg}", err=True)
 
-    # Cross-file checks: precedence uniqueness (as before)
+    # 2) Cross-reference collection
+    defined: dict[str, Set[str]] = {
+        "effect": {getattr(o, "id") for _, o, _ in parsed["effects"]},
+        "condition": {getattr(o, "id") for _, o, _ in parsed["conditions"]},
+        "resource": {getattr(o, "id") for _, o, _ in parsed["resources"]},
+        "zone": {getattr(o, "id") for _, o, _ in parsed["zones"]},
+        "task": {getattr(o, "id") for _, o, _ in parsed["tasks"]},
+        "item": {getattr(o, "id") for _, o, _ in parsed["items"]},
+        "kit": {getattr(o, "id") for _, o, _ in parsed["kits"]},
+        "campaign": {getattr(o, "id") for _, o, _ in parsed["campaigns"]},
+    }
+    refs: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+
+    # Collect refs from each content kind (raw dicts)
+    for fp, _o, raw in parsed["effects"]:
+        _collect_refs_from_effect(raw, str(fp), refs)
+    for fp, _o, raw in parsed["zones"]:
+        _collect_refs_from_zone(raw, str(fp), refs)
+    for fp, _o, raw in parsed["tasks"]:
+        _collect_refs_from_task(raw, str(fp), refs)
+    for fp, _o, raw in parsed["kits"]:
+        _collect_refs_from_kit(raw, str(fp), refs)
+    for fp, _o, raw in parsed["campaigns"]:
+        _collect_refs_from_campaign(raw, str(fp), refs)
+
+    # 3) Missing references (errors)
+    def _report_missing(cat: str):
+        nonlocal ok
+        used = refs.get(cat, {})
+        missing = set(used.keys()) - defined.get(cat, set())
+        for mid in sorted(missing):
+            locs = ", ".join(sorted(used[mid]))
+            typer.echo(f"[ERROR] Missing {cat} id '{mid}' referenced from: {locs}", err=True)
+            ok = False
+
+    for cat in ("condition","resource","zone","effect","item","kit"):
+        _report_missing(cat)
+
+    # 4) Unused ids (warnings only if enabled)
+    if warn_unused:
+        for cat in ("effect","condition","resource","zone","item","kit","campaign","task"):
+            defined_set = defined.get(cat, set())
+            used_set = set(refs.get(cat, {}).keys())
+            unused = sorted(defined_set - used_set)
+            for uid in unused:
+                typer.echo(f"[WARN] Unused {cat} id: {uid}")
+
+    # 5) Existing cross-file checks (e.g., precedence uniqueness)
     precedences: dict[int, list[str]] = {}
     for fp, cond, _raw in parsed.get("conditions", []):
         prec = getattr(cond, "precedence", None)

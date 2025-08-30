@@ -152,9 +152,9 @@ M1 — Project foundation and core models
   - [x] Expression prevalidation
     - [x] Parse all Expr fields at load; allowlist functions (min, max, floor, ceil, ability_mod, level, class_level, caster_level, initiator_level, hd)
     - [x] Unknown symbols/functions produce validation errors under --strict-expr
-  - [ ] Cross-reference validation
-    - [ ] Verify references exist: condition ids, resource ids, zone ids, item ids, kit ids, effect ids
-    - [ ] Warn on unused content ids
+  - [x] Cross-reference validation
+    - [x] Verify references exist: condition ids, resource ids, zone ids, item ids, kit ids, effect ids
+    - [x] Warn on unused content ids
   - [ ] ID policy & versioning
     - [ ] Enforce id regex ^[a-z0-9_.:-]+$ and namespace prefixes (spell., feat., cond., res., zone., task., kit., item.)
     - [ ] schema_version in files; migration hooks documented
