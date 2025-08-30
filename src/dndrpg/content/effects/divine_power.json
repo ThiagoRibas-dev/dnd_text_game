@@ -1,16 +1,18 @@
 {
   "id": "spell.divine_power",
   "name": "Divine Power",
+  "source": "spell",
   "abilityType": "Spell",
   "school": "Evocation",
-  "activation": { "action": "standard", "costs": ["spellslot:cleric:4"] },
-  "range": "personal",
-  "duration": { "type": "rounds", "formula": "caster_level" },
+  "activation": { "action": "standard", "provokesAoO": true, "costs": ["spellslot:cleric:4"] },
+  "range": { "type": "personal" },
+  "duration": { "type": "rounds", "formula": "caster_level()" },
+  "gates": { "sr": { "applies": false } },
   "modifiers": [
     { "targetPath": "abilities.str.enhancement", "operator": "add", "value": 6, "bonusType": "enhancement" },
-    { "targetPath": "combat.bab.effective", "operator": "max", "value": "character_level" }
+    { "targetPath": "combat.bab.effective", "operator": "max", "value": "level()" }
   ],
   "operations": [
-    { "op": "resource.create_temp_hp", "amount": "caster_level" }
+    { "op": "resource.create_temp_hp", "params": { "amount": "caster_level()" } }
   ]
 }

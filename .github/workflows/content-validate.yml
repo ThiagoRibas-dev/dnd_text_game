@@ -1,0 +1,48 @@
+name: CI — Validate Content
+
+on:
+  pull_request:
+    branches: [ "**" ]
+  push:
+    branches: [ main ]
+  # (Optional) run only when content or schema tooling changes:
+  # pull_request:
+  #   paths:
+  #     - "src/dndrpg/content/**"
+  #     - "src/dndrpg/engine/schema_models.py"
+  #     - "src/dndrpg/tools/**"
+  #     - "pyproject.toml"
+
+jobs:
+  validate-content:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install package (with dev extras)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      # Option A: Use console script (if [project.scripts] dndrpg-tools is defined)
+      - name: Validate content (CLI)
+        run: dndrpg-tools validate-content
+
+      # Option B (fallback): Use module invocation without console script
+      # - name: Validate content (module)
+      #   run: python -m dndrpg.tools.validate validate-content

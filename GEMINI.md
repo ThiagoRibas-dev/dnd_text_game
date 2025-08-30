@@ -110,14 +110,14 @@ M1 — Project foundation and core models
   - [x] Attack bonuses (melee/ranged/touch), crit profile (range/multiplier)
 - [x] Content loader (JSON/YAML) + content folder
 - [x] Expression engine wrapper + functions: ability_mod, level/class_level, caster_level, initiator_level, HD, min/max/floor/ceil
-- [ ] JSON Schemas: EffectDefinition, ConditionDefinition, ResourceDefinition, TaskDefinition, ZoneDefinition
+- [x] JSON Schemas: EffectDefinition, ConditionDefinition, ResourceDefinition, TaskDefinition, ZoneDefinition
 - [ ] Deterministic RNG (seed per encounter; include seed in explain logs)
 - [ ] Basic unit test harness (pytest + hypothesis)
-- [ ] JSON Schemas (Items)
-  - [ ] Export JSON Schemas for Item, Weapon, Armor, Shield (Pydantic v2 .model_json_schema) to docs/schemas/
-  - [ ] CLI: validate-content (loads all content files, validates against schemas)
-  - [ ] CI: run validate-content on PRs; fail on schema or parse errors
-  - [ ] Pre-commit hook: run validate-content on changed files  
+- [x] JSON Schemas (Items)
+  - [x] Export JSON Schemas for Item, Weapon, Armor, Shield (Pydantic v2 .model_json_schema) to docs/schemas/
+  - [x] CLI: validate-content (loads all content files, validates against schemas)
+  - [x] CI: run validate-content on PRs; fail on schema or parse errors
+  - [x] Pre-commit hook: run validate-content on changed files  
 - [ ] Schema hardening & content lints
   - [ ] Operations: switch from free-form params to a discriminated union
     - [ ] Define op kinds (damage, heal, condition.apply/remove, resource.create/spend/restore, zone.create, save, attach/detach, move/teleport, transform, dispel/suppress, schedule, etc.)

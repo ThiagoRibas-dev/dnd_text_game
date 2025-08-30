@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: dndrpg-validate-content-changed
+        name: Validate DnD content (changed files)
+        entry: python -m dndrpg.tools.validate validate-files
+        language: system
+        types: [file]
+        pass_filenames: true
+        files: ^src/dndrpg/content/(effects|conditions|resources|tasks|zones)/.*\.(json|ya?ml)$

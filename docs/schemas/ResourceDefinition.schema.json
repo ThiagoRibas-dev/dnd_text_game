@@ -1,0 +1,232 @@
+{
+  "$defs": {
+    "ResourceRefresh": {
+      "properties": {
+        "cadence": {
+          "enum": [
+            "per_round",
+            "per_encounter",
+            "per_rest",
+            "per_day",
+            "per_week",
+            "special"
+          ],
+          "title": "Cadence",
+          "type": "string"
+        },
+        "behavior": {
+          "default": "reset_to_max",
+          "enum": [
+            "reset_to_max",
+            "increment_by",
+            "no_change"
+          ],
+          "title": "Behavior",
+          "type": "string"
+        },
+        "increment_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Increment By"
+        },
+        "triggers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Triggers"
+        }
+      },
+      "required": [
+        "cadence"
+      ],
+      "title": "ResourceRefresh",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Name"
+    },
+    "scope": {
+      "default": "entity",
+      "enum": [
+        "entity",
+        "effect-instance",
+        "item",
+        "zone"
+      ],
+      "title": "Scope",
+      "type": "string"
+    },
+    "capacity": {
+      "additionalProperties": true,
+      "title": "Capacity",
+      "type": "object"
+    },
+    "initial_current": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Initial Current"
+    },
+    "refresh": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ResourceRefresh"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "expiry": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expiry"
+    },
+    "absorption": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Absorption"
+    },
+    "visibility": {
+      "anyOf": [
+        {
+          "enum": [
+            "public",
+            "private",
+            "hidden"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "public",
+      "title": "Visibility"
+    },
+    "stacking": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stacking"
+    },
+    "recomputeOn": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recomputeon"
+    },
+    "freezeOnAttach": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Freezeonattach"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "id",
+    "capacity"
+  ],
+  "title": "ResourceDefinition",
+  "type": "object"
+}

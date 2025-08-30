@@ -1,0 +1,191 @@
+{
+  "$defs": {
+    "RuleHook": {
+      "properties": {
+        "scope": {
+          "enum": [
+            "targeting",
+            "incoming.effect",
+            "incoming.condition",
+            "incoming.damage",
+            "on.save",
+            "on.attack",
+            "on.damageDealt",
+            "on.damageTaken",
+            "on.crit",
+            "on.maneuverGrant",
+            "scheduler",
+            "suppression",
+            "resource"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "match": {
+          "additionalProperties": true,
+          "title": "Match",
+          "type": "object"
+        },
+        "action": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Action",
+          "type": "array"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        }
+      },
+      "required": [
+        "scope"
+      ],
+      "title": "RuleHook",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "timeUnit": {
+      "enum": [
+        "minutes",
+        "hours",
+        "days",
+        "weeks"
+      ],
+      "title": "Timeunit",
+      "type": "string"
+    },
+    "step": {
+      "title": "Step",
+      "type": "integer"
+    },
+    "inputs": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Inputs"
+    },
+    "costs": {
+      "anyOf": [
+        {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Costs"
+    },
+    "hooks": {
+      "items": {
+        "$ref": "#/$defs/RuleHook"
+      },
+      "title": "Hooks",
+      "type": "array"
+    },
+    "progress": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Progress"
+    },
+    "completion": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completion"
+    },
+    "interrupts": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Interrupts"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "timeUnit",
+    "step"
+  ],
+  "title": "TaskDefinition",
+  "type": "object"
+}

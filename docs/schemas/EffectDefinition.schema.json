@@ -1,0 +1,1099 @@
+{
+  "$defs": {
+    "ActivationSpec": {
+      "properties": {
+        "action": {
+          "default": "standard",
+          "enum": [
+            "passive",
+            "free",
+            "swift",
+            "immediate",
+            "reaction",
+            "move",
+            "standard",
+            "full-round",
+            "special"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "provokesAoO": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provokesaoo"
+        },
+        "costs": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Costs"
+        },
+        "concentration": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Concentration"
+        },
+        "cooldown": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cooldown"
+        }
+      },
+      "title": "ActivationSpec",
+      "type": "object"
+    },
+    "AreaSpec": {
+      "properties": {
+        "shape": {
+          "default": "none",
+          "enum": [
+            "none",
+            "line",
+            "cone",
+            "burst",
+            "spread",
+            "emanation",
+            "cylinder",
+            "wall",
+            "sphere",
+            "cube",
+            "square"
+          ],
+          "title": "Shape",
+          "type": "string"
+        },
+        "size_ft": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size Ft"
+        },
+        "length_ft": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length Ft"
+        },
+        "width_ft": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width Ft"
+        },
+        "radius_ft": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Radius Ft"
+        }
+      },
+      "title": "AreaSpec",
+      "type": "object"
+    },
+    "AttackGate": {
+      "properties": {
+        "mode": {
+          "default": "none",
+          "enum": [
+            "none",
+            "melee",
+            "ranged",
+            "melee_touch",
+            "ranged_touch",
+            "ray",
+            "special"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "ac_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "normal",
+                "touch",
+                "flat-footed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ac Type"
+        },
+        "crit_behavior": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Crit Behavior"
+        }
+      },
+      "title": "AttackGate",
+      "type": "object"
+    },
+    "DurationSpec": {
+      "properties": {
+        "type": {
+          "enum": [
+            "instantaneous",
+            "rounds",
+            "minutes",
+            "hours",
+            "days",
+            "permanent",
+            "concentration",
+            "special"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Formula"
+        },
+        "end_conditions": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Conditions"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DurationSpec",
+      "type": "object"
+    },
+    "Gates": {
+      "properties": {
+        "sr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SRGate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "save": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SaveGate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "attack": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AttackGate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Gates",
+      "type": "object"
+    },
+    "Modifier": {
+      "properties": {
+        "targetPath": {
+          "title": "Targetpath",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "add",
+            "subtract",
+            "multiply",
+            "divide",
+            "set",
+            "min",
+            "max",
+            "replace",
+            "replaceFormula",
+            "cap",
+            "clamp",
+            "grantTag",
+            "removeTag",
+            "convertType"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          ],
+          "default": 0,
+          "title": "Value"
+        },
+        "bonusType": {
+          "anyOf": [
+            {
+              "enum": [
+                "enhancement",
+                "morale",
+                "luck",
+                "insight",
+                "competence",
+                "sacred",
+                "profane",
+                "resistance",
+                "deflection",
+                "dodge",
+                "size",
+                "natural_armor",
+                "natural_armor_enhancement",
+                "circumstance",
+                "alchemical",
+                "unnamed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bonustype"
+        },
+        "sourceKey": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcekey"
+        },
+        "conditions": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conditions"
+        },
+        "durationOverride": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Durationoverride"
+        },
+        "flags": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Flags"
+        }
+      },
+      "required": [
+        "targetPath",
+        "operator"
+      ],
+      "title": "Modifier",
+      "type": "object"
+    },
+    "Operation": {
+      "properties": {
+        "op": {
+          "title": "Op",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Operation",
+      "type": "object"
+    },
+    "RangeSpec": {
+      "properties": {
+        "type": {
+          "default": "personal",
+          "enum": [
+            "personal",
+            "touch",
+            "close",
+            "medium",
+            "long",
+            "fixed-ft",
+            "sight",
+            "special"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "distance_ft": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance Ft"
+        }
+      },
+      "title": "RangeSpec",
+      "type": "object"
+    },
+    "RuleHook": {
+      "properties": {
+        "scope": {
+          "enum": [
+            "targeting",
+            "incoming.effect",
+            "incoming.condition",
+            "incoming.damage",
+            "on.save",
+            "on.attack",
+            "on.damageDealt",
+            "on.damageTaken",
+            "on.crit",
+            "on.maneuverGrant",
+            "scheduler",
+            "suppression",
+            "resource"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "match": {
+          "additionalProperties": true,
+          "title": "Match",
+          "type": "object"
+        },
+        "action": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Action",
+          "type": "array"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        }
+      },
+      "required": [
+        "scope"
+      ],
+      "title": "RuleHook",
+      "type": "object"
+    },
+    "SRGate": {
+      "properties": {
+        "applies": {
+          "default": true,
+          "title": "Applies",
+          "type": "boolean"
+        }
+      },
+      "title": "SRGate",
+      "type": "object"
+    },
+    "SaveGate": {
+      "properties": {
+        "type": {
+          "enum": [
+            "Fort",
+            "Ref",
+            "Will"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "dc": {
+          "title": "Dc",
+          "type": "string"
+        },
+        "effect": {
+          "default": "negates",
+          "enum": [
+            "negates",
+            "half",
+            "partial",
+            "none"
+          ],
+          "title": "Effect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "dc"
+      ],
+      "title": "SaveGate",
+      "type": "object"
+    },
+    "TargetFilter": {
+      "properties": {
+        "self": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Self"
+        },
+        "ally": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ally"
+        },
+        "enemy": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enemy"
+        },
+        "creature": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Creature"
+        },
+        "object": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Object"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "subtype": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtype"
+        },
+        "alignment": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alignment"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size"
+        },
+        "HD_cap": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hd Cap"
+        },
+        "count_cap": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count Cap"
+        },
+        "LoS": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Los"
+        },
+        "LoE": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loe"
+        }
+      },
+      "title": "TargetFilter",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "source": {
+      "default": "spell",
+      "enum": [
+        "feat",
+        "class",
+        "spell",
+        "power",
+        "maneuver",
+        "stance",
+        "soulmeld",
+        "binding",
+        "race",
+        "item",
+        "condition",
+        "zone",
+        "other"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "abilityType": {
+      "default": "Spell",
+      "enum": [
+        "Ex",
+        "Su",
+        "Sp",
+        "Spell"
+      ],
+      "title": "Abilitytype",
+      "type": "string"
+    },
+    "school": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "School"
+    },
+    "descriptors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Descriptors",
+      "type": "array"
+    },
+    "casterLevel": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Casterlevel"
+    },
+    "prerequisites": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Prerequisites"
+    },
+    "stacking": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stacking"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    },
+    "activation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ActivationSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "range": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RangeSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "targetFilter": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TargetFilter"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "area": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AreaSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "when": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "When"
+    },
+    "duration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DurationSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "triggers": {
+      "anyOf": [
+        {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Triggers"
+    },
+    "recurring": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recurring"
+    },
+    "ongoing_save": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ongoing Save"
+    },
+    "gates": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Gates"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "operations": {
+      "items": {
+        "$ref": "#/$defs/Operation"
+      },
+      "title": "Operations",
+      "type": "array"
+    },
+    "modifiers": {
+      "items": {
+        "$ref": "#/$defs/Modifier"
+      },
+      "title": "Modifiers",
+      "type": "array"
+    },
+    "ruleHooks": {
+      "items": {
+        "$ref": "#/$defs/RuleHook"
+      },
+      "title": "Rulehooks",
+      "type": "array"
+    },
+    "resourceDefinitions": {
+      "anyOf": [
+        {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Resourcedefinitions"
+    },
+    "choices": {
+      "anyOf": [
+        {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Choices"
+    },
+    "srApplies": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Srapplies"
+    },
+    "antimagic": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Antimagic"
+    },
+    "dispellable": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dispellable"
+    }
+  },
+  "required": [
+    "id",
+    "name"
+  ],
+  "title": "EffectDefinition",
+  "type": "object"
+}

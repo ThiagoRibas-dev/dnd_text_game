@@ -1,0 +1,338 @@
+{
+  "$defs": {
+    "DurationSpec": {
+      "properties": {
+        "type": {
+          "enum": [
+            "instantaneous",
+            "rounds",
+            "minutes",
+            "hours",
+            "days",
+            "permanent",
+            "concentration",
+            "special"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Formula"
+        },
+        "end_conditions": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Conditions"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DurationSpec",
+      "type": "object"
+    },
+    "Modifier": {
+      "properties": {
+        "targetPath": {
+          "title": "Targetpath",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "add",
+            "subtract",
+            "multiply",
+            "divide",
+            "set",
+            "min",
+            "max",
+            "replace",
+            "replaceFormula",
+            "cap",
+            "clamp",
+            "grantTag",
+            "removeTag",
+            "convertType"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          ],
+          "default": 0,
+          "title": "Value"
+        },
+        "bonusType": {
+          "anyOf": [
+            {
+              "enum": [
+                "enhancement",
+                "morale",
+                "luck",
+                "insight",
+                "competence",
+                "sacred",
+                "profane",
+                "resistance",
+                "deflection",
+                "dodge",
+                "size",
+                "natural_armor",
+                "natural_armor_enhancement",
+                "circumstance",
+                "alchemical",
+                "unnamed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bonustype"
+        },
+        "sourceKey": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcekey"
+        },
+        "conditions": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conditions"
+        },
+        "durationOverride": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Durationoverride"
+        },
+        "flags": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Flags"
+        }
+      },
+      "required": [
+        "targetPath",
+        "operator"
+      ],
+      "title": "Modifier",
+      "type": "object"
+    },
+    "RuleHook": {
+      "properties": {
+        "scope": {
+          "enum": [
+            "targeting",
+            "incoming.effect",
+            "incoming.condition",
+            "incoming.damage",
+            "on.save",
+            "on.attack",
+            "on.damageDealt",
+            "on.damageTaken",
+            "on.crit",
+            "on.maneuverGrant",
+            "scheduler",
+            "suppression",
+            "resource"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "match": {
+          "additionalProperties": true,
+          "title": "Match",
+          "type": "object"
+        },
+        "action": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Action",
+          "type": "array"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        }
+      },
+      "required": [
+        "scope"
+      ],
+      "title": "RuleHook",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
+    },
+    "precedence": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Precedence"
+    },
+    "default_duration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DurationSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "modifiers": {
+      "items": {
+        "$ref": "#/$defs/Modifier"
+      },
+      "title": "Modifiers",
+      "type": "array"
+    },
+    "ruleHooks": {
+      "items": {
+        "$ref": "#/$defs/RuleHook"
+      },
+      "title": "Rulehooks",
+      "type": "array"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "id",
+    "name"
+  ],
+  "title": "ConditionDefinition",
+  "type": "object"
+}
