@@ -142,10 +142,10 @@ M1 — Project foundation and core models
     - [x] refresh.behavior == "increment_by" → require increment_by
     - [x] absorption.absorbTypes enum; absorbPerHit >= 0; absorbOrder enum
     - [x] freezeOnAttach boolean; scope enum enforced
-  - [ ] TaskDefinition tightening
-    - [ ] timeUnit ∈ {minutes,hours,days,weeks}; step > 0
-    - [ ] hooks limited to scope == "scheduler"; must specify events (eachStep, onStart, onComplete)
-    - [ ] progress/completion required shape; costs resource kinds enum (gp,xp,resource:<id>)
+  - [x] TaskDefinition tightening
+    - [x] timeUnit ∈ {minutes,hours,days,weeks}; step > 0
+    - [x] hooks limited to scope == "scheduler"; must specify events (eachStep, onStart, onComplete)
+    - [x] progress/completion required shape; costs resource kinds enum (gp,xp,resource:<id>)
   - [ ] ZoneDefinition tightening
     - [ ] shape != none; duration rules (instant vs timed); hooks scopes limited to on-enter/on-leave/scheduler/incoming.effect
     - [ ] suppression fields enum (antimagic, spell_globe:<=N, etc.)

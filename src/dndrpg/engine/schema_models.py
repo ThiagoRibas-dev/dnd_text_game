@@ -820,18 +820,74 @@ class ResourceDefinition(BaseModel):
 
 
 # TaskDefinition (Downtime/Exploration tasks)
+class TaskCost(BaseModel):
+    kind: Literal["gp", "xp", "resource"]
+    amount: Expr
+    timing: Optional[Literal["start", "eachStep", "end"]] = "start"
+    resource_id: Optional[str] = None  # required when kind == "resource"
+
+    @model_validator(mode="after")
+    def _validate(self):
+        if self.kind == "resource" and not self.resource_id:
+            raise ValueError("TaskCost kind 'resource' requires resource_id")
+        return self
+
+class ProgressSpec(BaseModel):
+    # Track progress in a named variable (default 'progress')
+    var: str = "progress"
+    initial: Expr = 0  # initial value; default 0
+
+class CompletionSpec(BaseModel):
+    # Either: when (predicate expression) OR (targetVar + targetAmount)
+    when: Optional[str] = None                 # expression: returns truthy when complete
+    targetVar: Optional[str] = None
+    targetAmount: Optional[Expr] = None
+    actions: List[HookAction] = Field(default_factory=list)  # actions to run on completion
+
+    @model_validator(mode="after")
+    def _require_predicate_or_target(self):
+        if self.when is None:
+            if not (self.targetVar and self.targetAmount is not None):
+                raise ValueError("completion requires either 'when' expression OR (targetVar and targetAmount)")
+        return self
+
 class TaskDefinition(BaseModel):
     id: str
     name: str
     timeUnit: Literal["minutes", "hours", "days", "weeks"]
-    step: int  # tick size in timeUnit
+    step: int  # tick size in timeUnit (>0)
     inputs: Optional[List[str]] = None
-    costs: Optional[List[Dict[str, Any]]] = None
-    hooks: List[RuleHook] = Field(default_factory=list)  # scheduler hooks like "eachStep"
-    progress: Optional[Dict[str, Any]] = None
-    completion: Optional[Dict[str, Any]] = None
-    interrupts: Optional[Dict[str, Any]] = None
+    costs: Optional[List[TaskCost]] = None
+    hooks: List[RuleHook] = Field(default_factory=list)  # scheduler-only, with event in match
+    progress: Optional[ProgressSpec] = None
+    completion: CompletionSpec  # REQUIRED
+    interrupts: Optional[Dict[str, Union[str, int]]] = None
     notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _validate(self):
+        errs: list[str] = []
+
+        # step > 0
+        if self.step <= 0:
+            errs.append("step must be > 0")
+
+        # hooks: only scheduler + must declare match.event in allowed set
+        allowed_events = {"onStart", "eachStep", "onComplete"}
+        for h in self.hooks:
+            if h.scope != "scheduler":
+                errs.append(f"Task hooks must use scope 'scheduler' (got '{h.scope}')")
+                continue
+            ev = None
+            if isinstance(h.match, dict):
+                ev = h.match.get("event")
+            if not isinstance(ev, str) or ev not in allowed_events:
+                errs.append(f"Task scheduler hook requires match.event in {sorted(allowed_events)} (got {ev!r})")
+
+        if errs:
+            raise ValueError("; ".join(errs))
+        return self
+
 
 # ZoneDefinition
 class ZoneDefinition(BaseModel):
@@ -860,3 +916,7 @@ ResourceDefinition.model_rebuild()
 ResourceRefresh.model_rebuild()
 AbsorptionSpec.model_rebuild()
 CapacitySpec.model_rebuild()
+TaskCost.model_rebuild()
+ProgressSpec.model_rebuild()
+CompletionSpec.model_rebuild()
+TaskDefinition.model_rebuild()

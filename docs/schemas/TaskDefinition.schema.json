@@ -444,6 +444,143 @@
       "title": "AreaSpec",
       "type": "object"
     },
+    "CompletionSpec": {
+      "properties": {
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "When"
+        },
+        "targetVar": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Targetvar"
+        },
+        "targetAmount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Targetamount"
+        },
+        "actions": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "absorbIntoPool": "#/$defs/ActAbsorbIntoPool",
+                "cap": "#/$defs/ActCap",
+                "condition.apply": "#/$defs/OpConditionApply",
+                "condition.remove": "#/$defs/OpConditionRemove",
+                "dispel": "#/$defs/OpDispel",
+                "modify": "#/$defs/ActModify",
+                "multiply": "#/$defs/ActMultiply",
+                "redirect": "#/$defs/ActRedirect",
+                "reflect": "#/$defs/ActReflect",
+                "reroll": "#/$defs/ActReroll",
+                "resource.create": "#/$defs/OpResourceCreate",
+                "resource.restore": "#/$defs/OpResourceRestore",
+                "resource.set": "#/$defs/OpResourceSet",
+                "resource.spend": "#/$defs/OpResourceSpend",
+                "save": "#/$defs/OpSave",
+                "schedule": "#/$defs/OpSchedule",
+                "setOutcome": "#/$defs/ActSetOutcome",
+                "suppress": "#/$defs/OpSuppress",
+                "unsuppress": "#/$defs/OpUnsuppress"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ActModify"
+              },
+              {
+                "$ref": "#/$defs/ActReroll"
+              },
+              {
+                "$ref": "#/$defs/ActCap"
+              },
+              {
+                "$ref": "#/$defs/ActMultiply"
+              },
+              {
+                "$ref": "#/$defs/ActReflect"
+              },
+              {
+                "$ref": "#/$defs/ActRedirect"
+              },
+              {
+                "$ref": "#/$defs/ActAbsorbIntoPool"
+              },
+              {
+                "$ref": "#/$defs/ActSetOutcome"
+              },
+              {
+                "$ref": "#/$defs/OpSave"
+              },
+              {
+                "$ref": "#/$defs/OpConditionApply"
+              },
+              {
+                "$ref": "#/$defs/OpConditionRemove"
+              },
+              {
+                "$ref": "#/$defs/OpResourceCreate"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSpend"
+              },
+              {
+                "$ref": "#/$defs/OpResourceRestore"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSet"
+              },
+              {
+                "$ref": "#/$defs/OpSchedule"
+              },
+              {
+                "$ref": "#/$defs/OpDispel"
+              },
+              {
+                "$ref": "#/$defs/OpSuppress"
+              },
+              {
+                "$ref": "#/$defs/OpUnsuppress"
+              }
+            ]
+          },
+          "title": "Actions",
+          "type": "array"
+        }
+      },
+      "title": "CompletionSpec",
+      "type": "object"
+    },
     "DurationSpec": {
       "properties": {
         "type": {
@@ -1682,6 +1819,32 @@
       "title": "OpZoneDestroy",
       "type": "object"
     },
+    "ProgressSpec": {
+      "properties": {
+        "var": {
+          "default": "progress",
+          "title": "Var",
+          "type": "string"
+        },
+        "initial": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "default": 0,
+          "title": "Initial"
+        }
+      },
+      "title": "ProgressSpec",
+      "type": "object"
+    },
     "RuleHook": {
       "properties": {
         "scope": {
@@ -1828,6 +1991,68 @@
       ],
       "title": "RuleHook",
       "type": "object"
+    },
+    "TaskCost": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "gp",
+            "xp",
+            "resource"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Amount"
+        },
+        "timing": {
+          "anyOf": [
+            {
+              "enum": [
+                "start",
+                "eachStep",
+                "end"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "start",
+          "title": "Timing"
+        },
+        "resource_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resource Id"
+        }
+      },
+      "required": [
+        "kind",
+        "amount"
+      ],
+      "title": "TaskCost",
+      "type": "object"
     }
   },
   "properties": {
@@ -1872,8 +2097,7 @@
       "anyOf": [
         {
           "items": {
-            "additionalProperties": true,
-            "type": "object"
+            "$ref": "#/$defs/TaskCost"
           },
           "type": "array"
         },
@@ -1894,33 +2118,30 @@
     "progress": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/ProgressSpec"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Progress"
+      "default": null
     },
     "completion": {
-      "anyOf": [
-        {
-          "additionalProperties": true,
-          "type": "object"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Completion"
+      "$ref": "#/$defs/CompletionSpec"
     },
     "interrupts": {
       "anyOf": [
         {
-          "additionalProperties": true,
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
           "type": "object"
         },
         {
@@ -1947,7 +2168,8 @@
     "id",
     "name",
     "timeUnit",
-    "step"
+    "step",
+    "completion"
   ],
   "title": "TaskDefinition",
   "type": "object"
