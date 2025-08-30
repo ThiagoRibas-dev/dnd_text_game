@@ -1,5 +1,118 @@
 {
   "$defs": {
+    "AbsorptionSpec": {
+      "properties": {
+        "absorbTypes": {
+          "items": {
+            "enum": [
+              "any",
+              "physical",
+              "physical.bludgeoning",
+              "physical.piercing",
+              "physical.slashing",
+              "acid",
+              "cold",
+              "electricity",
+              "fire",
+              "sonic",
+              "force",
+              "negative",
+              "positive",
+              "nonlethal",
+              "bleed",
+              "typeless"
+            ],
+            "type": "string"
+          },
+          "title": "Absorbtypes",
+          "type": "array"
+        },
+        "absorbPerHit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Absorbperhit"
+        },
+        "absorbOrder": {
+          "anyOf": [
+            {
+              "enum": [
+                "before_resist",
+                "after_resist_before_dr",
+                "after_dr",
+                "final"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Absorborder"
+        }
+      },
+      "title": "AbsorptionSpec",
+      "type": "object"
+    },
+    "CapacitySpec": {
+      "properties": {
+        "formula": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Formula"
+        },
+        "cap": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cap"
+        },
+        "computeAt": {
+          "anyOf": [
+            {
+              "enum": [
+                "attach",
+                "refresh",
+                "query"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "attach",
+          "title": "Computeat"
+        }
+      },
+      "required": [
+        "formula"
+      ],
+      "title": "CapacitySpec",
+      "type": "object"
+    },
     "ResourceRefresh": {
       "properties": {
         "cadence": {
@@ -94,9 +207,7 @@
       "type": "string"
     },
     "capacity": {
-      "additionalProperties": true,
-      "title": "Capacity",
-      "type": "object"
+      "$ref": "#/$defs/CapacitySpec"
     },
     "initial_current": {
       "anyOf": [
@@ -130,7 +241,16 @@
     "expiry": {
       "anyOf": [
         {
-          "additionalProperties": true,
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
           "type": "object"
         },
         {
@@ -143,15 +263,13 @@
     "absorption": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/AbsorptionSpec"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Absorption"
+      "default": null
     },
     "visibility": {
       "anyOf": [
@@ -173,7 +291,16 @@
     "stacking": {
       "anyOf": [
         {
-          "additionalProperties": true,
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
           "type": "object"
         },
         {

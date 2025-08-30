@@ -137,11 +137,11 @@ M1 — Project foundation and core models
     - [x] Deprecate replaceFormula; prefer set or replace with typed fields
   - [x] ConditionDefinition tightening
     - [x] tags enum (blinded, stunned, prone, etc.); precedence unique; default_duration must be allowed combos
-  - [ ] ResourceDefinition tightening
-    - [ ] capacity.formula required; capacity.cap >= 0
-    - [ ] refresh.behavior == "increment_by" → require increment_by
-    - [ ] absorption.absorbTypes enum; absorbPerHit >= 0; absorbOrder enum
-    - [ ] freezeOnAttach boolean; scope enum enforced
+  - [x] ResourceDefinition tightening
+    - [x] capacity.formula required; capacity.cap >= 0
+    - [x] refresh.behavior == "increment_by" → require increment_by
+    - [x] absorption.absorbTypes enum; absorbPerHit >= 0; absorbOrder enum
+    - [x] freezeOnAttach boolean; scope enum enforced
   - [ ] TaskDefinition tightening
     - [ ] timeUnit ∈ {minutes,hours,days,weeks}; step > 0
     - [ ] hooks limited to scope == "scheduler"; must specify events (eachStep, onStart, onComplete)

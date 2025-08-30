@@ -736,26 +736,88 @@ class ConditionDefinition(BaseModel):
         return self
 
 # ResourceDefinition
+# Absorbable packet types (align with your damage kinds, add aggregate "physical")
+AbsorbType = Literal[
+    "any",
+    "physical",
+    "physical.bludgeoning", "physical.piercing", "physical.slashing",
+    "acid", "cold", "electricity", "fire", "sonic", "force",
+    "negative", "positive", "nonlethal", "bleed", "typeless"
+]
+
+class CapacitySpec(BaseModel):
+    formula: Expr  # REQUIRED
+    cap: Optional[int] = None
+    computeAt: Optional[ComputeAt] = "attach"
+
+    @model_validator(mode="after")
+    def _validate(self):
+        # formula presence implicitly enforced by type; ensure cap non-negative
+        if self.cap is not None and self.cap < 0:
+            raise ValueError("capacity.cap must be >= 0")
+        return self
+
 class ResourceRefresh(BaseModel):
     cadence: Cadence
     behavior: Literal["reset_to_max", "increment_by", "no_change"] = "reset_to_max"
     increment_by: Optional[Expr] = None
     triggers: Optional[List[str]] = None
 
+    @model_validator(mode="after")
+    def _validate(self):
+        if self.behavior == "increment_by" and self.increment_by is None:
+            raise ValueError("refresh.behavior 'increment_by' requires increment_by")
+        return self
+
+# Absorption policy for ablative pools
+class AbsorptionSpec(BaseModel):
+    absorbTypes: List[AbsorbType] = Field(default_factory=list)
+    absorbPerHit: Optional[int] = None         # max absorbed per attack/hit
+    absorbOrder: Optional[Literal[
+        # Engine default is resist -> DR -> pool; use one of these to override:
+        "before_resist",               # apply pool before resist/DR
+        "after_resist_before_dr",      # after resist, before DR
+        "after_dr",                    # after DR (default if overriding)
+        "final"                        # last step (after everything else)
+    ]] = None
+
+    @model_validator(mode="after")
+    def _validate(self):
+        if not self.absorbTypes:
+            raise ValueError("absorption.absorbTypes must be a non-empty list")
+        if self.absorbPerHit is not None and self.absorbPerHit < 0:
+            raise ValueError("absorption.absorbPerHit must be >= 0")
+        # Normalize: if 'any' present, it must be the only entry
+        if "any" in self.absorbTypes and len(self.absorbTypes) > 1:
+            raise ValueError("absorption.absorbTypes: 'any' must not be combined with other types")
+        # If 'physical' present, don't combine with specific physical.*
+        if "physical" in self.absorbTypes:
+            if any(t.startswith("physical.") for t in self.absorbTypes if t != "physical"):
+                raise ValueError("absorption.absorbTypes: 'physical' must not be combined with specific physical.* kinds")
+        return self
+
 class ResourceDefinition(BaseModel):
     id: str
     name: Optional[str] = None
-    scope: ScopeType = "entity"
-    capacity: Dict[str, Any]  # { formula: str, cap?: int, computeAt?: 'attach'|'refresh'|'query' }
+    scope: ScopeType = "entity"                # enforced by enum
+    capacity: CapacitySpec                     # REQUIRED
     initial_current: Optional[Expr] = None
     refresh: Optional[ResourceRefresh] = None
-    expiry: Optional[Dict[str, Any]] = None
-    absorption: Optional[Dict[str, Any]] = None  # absorbTypes, perHit, order
+    expiry: Optional[Dict[str, Union[str, int]]] = None
+    absorption: Optional[AbsorptionSpec] = None
     visibility: Optional[Visibility] = "public"
-    stacking: Optional[Dict[str, Any]] = None
+    stacking: Optional[Dict[str, Union[str, int]]] = None
     recomputeOn: Optional[List[str]] = None
-    freezeOnAttach: Optional[bool] = None
+    freezeOnAttach: Optional[bool] = None      # will enforce boolean
+
     notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _validate(self):
+        # freezeOnAttach must be boolean if provided (pydantic type already enforces)
+        # Optional: default to False if omitted (engine-level default)
+        return self
+
 
 # TaskDefinition (Downtime/Exploration tasks)
 class TaskDefinition(BaseModel):
@@ -794,3 +856,7 @@ ActSetOutcome.model_rebuild()
 HookAction.__args__  # no-op to keep linters quiet
 RuleHook.model_rebuild()
 ConditionDefinition.model_rebuild()
+ResourceDefinition.model_rebuild()
+ResourceRefresh.model_rebuild()
+AbsorptionSpec.model_rebuild()
+CapacitySpec.model_rebuild()
