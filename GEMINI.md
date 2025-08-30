@@ -117,7 +117,50 @@ M1 — Project foundation and core models
   - [ ] Export JSON Schemas for Item, Weapon, Armor, Shield (Pydantic v2 .model_json_schema) to docs/schemas/
   - [ ] CLI: validate-content (loads all content files, validates against schemas)
   - [ ] CI: run validate-content on PRs; fail on schema or parse errors
-  - [ ] Pre-commit hook: run validate-content on changed files
+  - [ ] Pre-commit hook: run validate-content on changed files  
+- [ ] Schema hardening & content lints
+  - [ ] Operations: switch from free-form params to a discriminated union
+    - [ ] Define op kinds (damage, heal, condition.apply/remove, resource.create/spend/restore, zone.create, save, attach/detach, move/teleport, transform, dispel/suppress, schedule, etc.)
+    - [ ] Per-op required/optional fields (e.g., damage: amount, type; save: type, dc, onSuccess/onFail actions)
+  - [ ] RuleHook.action: typed action union
+    - [ ] Actions (modify, reroll, cap, multiply, reflect/redirect, absorbIntoPool, setOutcome, save, condition.apply/remove, resource.*, schedule)
+    - [ ] Validate allowed actions per hook scope
+  - [ ] EffectDefinition tightening
+    - [ ] range.type == "fixed-ft" → require distance_ft
+    - [ ] area.shape constraints (require size_ft or radius_ft/length_ft/width_ft as appropriate)
+    - [ ] duration rules (non-instant effects must have duration; concentration needs concentration:true)
+    - [ ] gates consistency (attack.ac_type required for touch/flat-footed modes; sr applies only to Spell/Sp)
+    - [ ] stacking policy shape (named:no_stack_highest|latest, sameSource, bonusType policy) validated
+  - [ ] Modifier constraints
+    - [ ] targetPath allowlist prefixes (abilities.*, ac.*, save.*, resist.*, dr.*, speed.*, senses.*, tags.*, resources.*)
+    - [ ] Require bonusType for additive stat bonuses where applicable; forbid invalid operator+target combos
+    - [ ] Deprecate replaceFormula; prefer set or replace with typed fields
+  - [ ] ConditionDefinition tightening
+    - [ ] tags enum (blinded, stunned, prone, etc.); precedence unique; default_duration must be allowed combos
+  - [ ] ResourceDefinition tightening
+    - [ ] capacity.formula required; capacity.cap >= 0
+    - [ ] refresh.behavior == "increment_by" → require increment_by
+    - [ ] absorption.absorbTypes enum; absorbPerHit >= 0; absorbOrder enum
+    - [ ] freezeOnAttach boolean; scope enum enforced
+  - [ ] TaskDefinition tightening
+    - [ ] timeUnit ∈ {minutes,hours,days,weeks}; step > 0
+    - [ ] hooks limited to scope == "scheduler"; must specify events (eachStep, onStart, onComplete)
+    - [ ] progress/completion required shape; costs resource kinds enum (gp,xp,resource:<id>)
+  - [ ] ZoneDefinition tightening
+    - [ ] shape != none; duration rules (instant vs timed); hooks scopes limited to on-enter/on-leave/scheduler/incoming.effect
+    - [ ] suppression fields enum (antimagic, spell_globe:<=N, etc.)
+  - [ ] Expression prevalidation
+    - [ ] Parse all Expr fields at load; allowlist functions (min, max, floor, ceil, ability_mod, level, class_level, caster_level, initiator_level, hd)
+    - [ ] Unknown symbols/functions produce validation errors under --strict-expr
+  - [ ] Cross-reference validation
+    - [ ] Verify references exist: condition ids, resource ids, zone ids, item ids, kit ids, effect ids
+    - [ ] Warn on unused content ids
+  - [ ] ID policy & versioning
+    - [ ] Enforce id regex ^[a-z0-9_.:-]+$ and namespace prefixes (spell., feat., cond., res., zone., task., kit., item.)
+    - [ ] schema_version in files; migration hooks documented
+  - [ ] CLI & CI
+    - [ ] dndrpg-tools validate-content --strict (expr + refs + typing) in CI
+    - [ ] Lint output with warnings vs errors; fail on errors only
 
 Acceptance: Can load a player, stats compute correctly, content files validate, and tests run green.
 
@@ -132,6 +175,11 @@ M2 — Effects/State engine (definitions → instances)
 - [ ] Rule hooks registry (incoming.effect, on.attack pre/post, on.save pre/post, scheduler ticks, incoming.damage)
 - [ ] Operations: damage/heal (HP/nonlethal/ability dmg/drain), apply/remove condition, (create/spend/restore) resource, attach/detach effects, create zone
 - [ ] Antimagic/suppression flags per abilityType (Ex/Su/Sp/Spell)
+- [ ] Expression compilation cache
+  - [ ] Precompile expressions to AST on load; cache by string
+  - [ ] Benchmark: ensure eval hot paths (damage, saves) avoid re-parsing
+- [ ] TargetPath registry
+  - [ ] Central registry with metadata (type, allowed ops, requires bonusType?) used by schema and runtime checks
 
 Acceptance: Can attach a self-buff with typed modifiers and a timed duration; modifiers apply and expire correctly; untyped same-source does not stack.
 
@@ -210,6 +258,10 @@ M6 — Core content pack (SRD)
   - [ ] Default deities/domains (minimal SRD subset for cleric flow)
 - [ ] Premade characters (optional)
   - [ ] Sample premades (.yaml) to speed testing: Human Fighter 1, Human Cleric 1, Elf Sorcerer 1, Human Monk 1
+- [ ] Content conformance tests
+  - [ ] Unit tests: sample effects/conditions/resources validate under strict schema
+  - [ ] Property tests: all content in pack parses; no unknown descriptors/tags; all refs resolve
+  - [ ] Snapshot tests for a few complex effects (Grease, Divine Power, Battletide) against the strict schema
 
 Acceptance: A level-1 Cleric and Fighter can adventure, cast/attack, travel, and rest. Crusader & Totemist minimal loops function.
 
@@ -285,6 +337,12 @@ M10 — Save/Load, packaging, docs
   - [ ] Campaign authoring guide (CampaignDefinition schema + examples)
   - [ ] Character creation checklist (how choices map to EffectDefinitions and entity fields)
   - [ ] Save data spec and compatibility policy
+- [ ] Schema docs generation
+  - [ ] Export JSON Schemas + human docs (mkdocs) with examples
+  - [ ] Generate TypeScript types (quicktype) for external tooling
+- [ ] Authoring lints
+  - [ ] dndrpg-tools lint: conventions (id prefixes, bonusType required, area/range/duration combos), common mistakes (e.g., dodge stacking misuse)
+  - [ ] --fix option for simple rewrites (rename fields, normalize shapes)
 
 Acceptance: Users can download a binary, run the game, play a session, save/load, and read docs to add content.
 
