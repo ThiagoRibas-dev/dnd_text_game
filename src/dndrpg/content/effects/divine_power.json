@@ -10,7 +10,7 @@
   "gates": { "sr": { "applies": false } },
   "modifiers": [
     { "targetPath": "abilities.str.enhancement", "operator": "add", "value": 6, "bonusType": "enhancement" },
-    { "targetPath": "combat.bab.effective", "operator": "max", "value": "level()" }
+        { "targetPath": "attack.bab.effective", "operator": "max", "value": "level()", "bonusType": "unnamed" }
   ],
   "operations": [
     { "op": "temp_hp", "amount": "caster_level()" }

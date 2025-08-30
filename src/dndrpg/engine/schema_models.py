@@ -23,11 +23,23 @@ Visibility = Literal["public", "private", "hidden"]
 GateBranch = Literal["negates", "half", "partial", "none"]
 
 # Modifiers
-ModifierOperator = Literal["add", "subtract", "multiply", "divide", "set", "min", "max",
-                           "replace", "replaceFormula", "cap", "clamp", "grantTag", "removeTag", "convertType"]
-BonusType = Literal["enhancement", "morale", "luck", "insight", "competence", "sacred", "profane",
-                    "resistance", "deflection", "dodge", "size", "natural_armor", "natural_armor_enhancement",
-                    "circumstance", "alchemical", "unnamed"]
+ModifierOperator = Literal[
+    "add","subtract","multiply","divide","set","min","max","replace","replaceFormula","cap","clamp","grantTag","removeTag","convertType"
+]
+BonusType = Literal[
+    "enhancement","morale","luck","insight","competence","sacred","profane",
+    "resistance","deflection","dodge","size","natural_armor","natural_armor_enhancement",
+    "circumstance","alchemical","unnamed"
+]
+
+_ALLOWED_PREFIXES = {
+    # as requested
+    "abilities","ac","save","resist","dr","speed","senses","tags","resources",
+    # practical additions so existing and common content doesn’t break
+    "attack","bab"
+}
+
+_NUMERIC_OPS = {"add","subtract","multiply","divide","set","min","max","cap","clamp","replace"}  # replace used as set/overwrite
 
 class Modifier(BaseModel):
     targetPath: str
@@ -38,6 +50,61 @@ class Modifier(BaseModel):
     conditions: Optional[Dict[str, Any]] = None
     durationOverride: Optional[Dict[str, Any]] = None
     flags: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def _validate(self):
+        errs: list[str] = []
+
+        # 1) Prefix allowlist
+        prefix = self.targetPath.split(".", 1)[0]
+        if prefix not in _ALLOWED_PREFIXES:
+            errs.append(
+                f"targetPath prefix '{prefix}' not allowed; allowed: "
+                f"{sorted(_ALLOWED_PREFIXES)}"
+            )
+
+        # 2) Deprecate replaceFormula
+        if self.operator == "replaceFormula":
+            errs.append("operator 'replaceFormula' is deprecated; use 'set' or 'replace'")
+
+        # 3) value required for numeric operators
+        if self.operator in _NUMERIC_OPS and self.value is None:
+            errs.append(f"modifier.value is required for operator '{self.operator}'")
+
+        # 4) Operator+target combos and bonusType requirements
+        if prefix == "tags":
+            if self.operator not in {"grantTag","removeTag"}:
+                errs.append("tags.* supports only 'grantTag' or 'removeTag'")
+        elif prefix == "speed":
+            if self.operator not in {"add","set","multiply","min","max","cap","clamp"}:
+                errs.append("speed.* allows only add/set/multiply/min/max/cap/clamp")
+        elif prefix == "senses":
+            if self.operator not in {"add","set","min","max"}:
+                errs.append("senses.* allows only add/set/min/max")
+        elif prefix in {"resist","dr"}:
+            if self.operator in {"multiply","divide"}:
+                errs.append(f"{prefix}.* does not support '{self.operator}' (use add/set/max)")
+        elif prefix == "resources":
+            if self.operator not in {"add","set","min","max","cap","clamp"}:
+                errs.append("resources.* allows only add/set/min/max/cap/clamp")
+        elif prefix in {"ac","save","abilities","attack","bab"}:
+            # Disallow weird math on core combat stats
+            if self.operator in {"multiply","divide"} and prefix in {"ac","save","abilities"}:
+                errs.append(f"{prefix}.* does not support '{self.operator}'")
+            # For additive bonuses on typed-stacking stats, require a bonusType
+            if self.operator in {"add","subtract"}:
+                if self.bonusType is None:
+                    errs.append(
+                        f"{prefix} additive modifiers require bonusType "
+                        f"(use 'unnamed' if truly untyped; beware stacking)"
+                    )
+        # 5) convertType belongs in rules/hook actions, not generic modifiers
+        if self.operator == "convertType":
+            errs.append("operator 'convertType' is not valid as a generic Modifier; use a RuleHook action")
+
+        if errs:
+            raise ValueError("; ".join(errs))
+        return self
 
 # -----------------------------
 # Operation Kinds (stricter)
