@@ -125,12 +125,12 @@ M1 — Project foundation and core models
   - [x] RuleHook.action: typed action union
     - [x] Actions (modify, reroll, cap, multiply, reflect/redirect, absorbIntoPool, setOutcome, save, condition.apply/remove, resource.*, schedule)
     - [x] Validate allowed actions per hook scope
-  - [ ] EffectDefinition tightening
-    - [ ] range.type == "fixed-ft" → require distance_ft
-    - [ ] area.shape constraints (require size_ft or radius_ft/length_ft/width_ft as appropriate)
-    - [ ] duration rules (non-instant effects must have duration; concentration needs concentration:true)
-    - [ ] gates consistency (attack.ac_type required for touch/flat-footed modes; sr applies only to Spell/Sp)
-    - [ ] stacking policy shape (named:no_stack_highest|latest, sameSource, bonusType policy) validated
+  - [x] EffectDefinition tightening
+    - [x] range.type == "fixed-ft" → require distance_ft
+    - [x] area.shape constraints (require size_ft or radius_ft/length_ft/width_ft as appropriate)
+    - [x] duration rules (non-instant effects must have duration; concentration needs concentration:true)
+    - [x] gates consistency (attack.ac_type required for touch/flat-footed modes; sr applies only to Spell/Sp)
+    - [x] stacking policy shape (named:no_stack_highest|latest, sameSource, bonusType policy) validated
   - [ ] Modifier constraints
     - [ ] targetPath allowlist prefixes (abilities.*, ac.*, save.*, resist.*, dr.*, speed.*, senses.*, tags.*, resources.*)
     - [ ] Require bonusType for additive stat bonuses where applicable; forbid invalid operator+target combos

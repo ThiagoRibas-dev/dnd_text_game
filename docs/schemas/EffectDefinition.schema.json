@@ -705,7 +705,6 @@
               "type": "number"
             },
             {
-              "additionalProperties": true,
               "type": "object"
             }
           ],
@@ -757,7 +756,6 @@
         "conditions": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -770,7 +768,6 @@
         "durationOverride": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -783,7 +780,6 @@
         "flags": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -860,7 +856,6 @@
           "default": null
         },
         "params": {
-          "additionalProperties": true,
           "title": "Params",
           "type": "object"
         },
@@ -1830,7 +1825,6 @@
         "set_stats": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -2032,7 +2026,6 @@
           "type": "string"
         },
         "match": {
-          "additionalProperties": true,
           "title": "Match",
           "type": "object"
         },
@@ -2140,7 +2133,6 @@
         "duration": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -2199,6 +2191,158 @@
         "type"
       ],
       "title": "SaveGate",
+      "type": "object"
+    },
+    "StackingPolicy": {
+      "properties": {
+        "named": {
+          "anyOf": [
+            {
+              "enum": [
+                "no_stack_highest",
+                "no_stack_latest",
+                "stack"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Named"
+        },
+        "namedKey": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Namedkey"
+        },
+        "magnitudeExpr": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Magnitudeexpr"
+        },
+        "familyKeys": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Familykeys"
+        },
+        "familyPolicy": {
+          "anyOf": [
+            {
+              "enum": [
+                "exclusive_highest",
+                "exclusive_latest"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Familypolicy"
+        },
+        "sameSource": {
+          "anyOf": [
+            {
+              "enum": [
+                "no_stack",
+                "stack"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Samesource"
+        },
+        "bonusTypePolicy": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "enum": [
+                  "stack",
+                  "no_stack_highest"
+                ],
+                "type": "string"
+              },
+              "propertyNames": {
+                "enum": [
+                  "enhancement",
+                  "morale",
+                  "luck",
+                  "insight",
+                  "competence",
+                  "sacred",
+                  "profane",
+                  "resistance",
+                  "deflection",
+                  "dodge",
+                  "size",
+                  "natural_armor",
+                  "natural_armor_enhancement",
+                  "circumstance",
+                  "alchemical",
+                  "untyped",
+                  "defaultTyped"
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bonustypepolicy"
+        },
+        "tieBreaker": {
+          "anyOf": [
+            {
+              "enum": [
+                "latest",
+                "highestCL",
+                "highestLevel",
+                "sourcePriority"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tiebreaker"
+        }
+      },
+      "title": "StackingPolicy",
       "type": "object"
     },
     "TargetFilter": {
@@ -2468,15 +2612,13 @@
     "stacking": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/StackingPolicy"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Stacking"
+      "default": null
     },
     "notes": {
       "anyOf": [
@@ -2561,7 +2703,6 @@
       "anyOf": [
         {
           "items": {
-            "additionalProperties": true,
             "type": "object"
           },
           "type": "array"
@@ -2576,7 +2717,6 @@
     "recurring": {
       "anyOf": [
         {
-          "additionalProperties": true,
           "type": "object"
         },
         {
@@ -2589,7 +2729,6 @@
     "ongoing_save": {
       "anyOf": [
         {
-          "additionalProperties": true,
           "type": "object"
         },
         {
@@ -2725,7 +2864,6 @@
       "anyOf": [
         {
           "items": {
-            "additionalProperties": true,
             "type": "object"
           },
           "type": "array"
@@ -2741,7 +2879,6 @@
       "anyOf": [
         {
           "items": {
-            "additionalProperties": true,
             "type": "object"
           },
           "type": "array"

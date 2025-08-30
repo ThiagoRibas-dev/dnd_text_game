@@ -383,12 +383,50 @@ class RangeSpec(BaseModel):
     type: RangeType = "personal"
     distance_ft: Optional[int] = None
 
+    @model_validator(mode="after")
+    def _validate(self):
+        if self.type == "fixed-ft":
+            if self.distance_ft is None or self.distance_ft <= 0:
+                raise ValueError("range.type 'fixed-ft' requires positive distance_ft")
+        return self
+
 class AreaSpec(BaseModel):
     shape: AreaShape = "none"
     size_ft: Optional[int] = None
     length_ft: Optional[int] = None
     width_ft: Optional[int] = None
     radius_ft: Optional[int] = None
+
+    @model_validator(mode="after")
+    def _validate(self):
+        s = self.shape
+        if s in ("none",):
+            return self
+        if s in ("square", "cube"):
+            if not self.size_ft or self.size_ft <= 0:
+                raise ValueError(f"area.shape '{s}' requires size_ft > 0")
+        elif s in ("burst", "sphere", "emanation"):
+            if not self.radius_ft or self.radius_ft <= 0:
+                raise ValueError(f"area.shape '{s}' requires radius_ft > 0")
+        elif s == "cone":
+            if not self.length_ft or self.length_ft <= 0:
+                raise ValueError("area.shape 'cone' requires length_ft > 0")
+        elif s == "line":
+            if not self.length_ft or self.length_ft <= 0:
+                raise ValueError("area.shape 'line' requires length_ft > 0")
+            # default width to 5 if omitted
+            if self.width_ft is None:
+                object.__setattr__(self, "width_ft", 5)
+        elif s == "cylinder":
+            if not self.radius_ft or self.radius_ft <= 0 or not self.length_ft or self.length_ft <= 0:
+                raise ValueError("area.shape 'cylinder' requires radius_ft > 0 and length_ft > 0")
+        elif s == "wall":
+            if not self.length_ft or self.length_ft <= 0:
+                raise ValueError("area.shape 'wall' requires length_ft > 0")
+            # width_ft optional; default to 5 if omitted
+            if self.width_ft is None:
+                object.__setattr__(self, "width_ft", 5)
+        return self
 
 class TargetFilter(BaseModel):
     self: Optional[bool] = None
@@ -419,10 +457,78 @@ class AttackGate(BaseModel):
     ac_type: Optional[Literal["normal", "touch", "flat-footed"]] = None
     crit_behavior: Optional[str] = None
 
+    @model_validator(mode="after")
+    def _validate(self):
+        if self.mode in ("melee_touch", "ranged_touch", "ray"):
+            if self.ac_type != "touch":
+                raise ValueError(f"attackGate.mode '{self.mode}' requires ac_type='touch'")
+        if self.ac_type == "flat-footed" and self.mode not in ("melee", "ranged"):
+            raise ValueError("ac_type='flat-footed' allowed only with mode melee or ranged")
+        return self
+
 class Gates(BaseModel):
     sr: Optional[SRGate] = None
     save: Optional[SaveGate] = None
     attack: Optional[AttackGate] = None
+
+class StackingPolicy(BaseModel):
+    # 1) Named (effect-level) exclusivity within a “named key”
+    # - no_stack_highest: keep the instance with highest magnitude (see magnitudeExpr or fallback)
+    # - no_stack_latest: keep the newest instance; older instances suppressed
+    # - stack: allow multiple instances to coexist (rare at effect-level)
+    named: Optional[Literal["no_stack_highest", "no_stack_latest", "stack"]] = None
+
+    # Which key defines “same named effect”
+    # - "id" (default) → treat same effect id as same named
+    # - "name" → same display name
+    # - "group:<key>" → uses entries in familyKeys to build groups (see below)
+    # - "tag:<tag>" → engines can precompute a tag membership set
+    namedKey: Optional[str] = None
+
+    # How to compare for no_stack_highest
+    # - "magnitudeExpr" is an expression evaluated per effect instance (actor context)
+    # - If omitted, engine falls back to a heuristic (see runtime notes)
+    magnitudeExpr: Optional[str] = None
+
+    # 2) Family/exclusion groups (for “not cumulative with similar effects” across different effect ids)
+    # all effects sharing any of these keys are mutually exclusive
+    familyKeys: Optional[List[str]] = None
+    familyPolicy: Optional[Literal["exclusive_highest", "exclusive_latest"]] = None
+
+    # 3) Same-source rule (primarily for untyped)
+    # - no_stack: ignore additive untyped modifiers with identical sourceKey
+    # - stack: allow (default is no_stack to match common “same source” clause)
+    sameSource: Optional[Literal["no_stack", "stack"]] = None
+
+    # 4) Per-bonus-type override of the global typed-stacking defaults
+    # - defaultTyped is applied when a type isn’t explicitly listed
+    # - Values: "stack" or "no_stack_highest"
+    bonusTypePolicy: Optional[Dict[
+        Literal[
+            "enhancement","morale","luck","insight","competence","sacred","profane",
+            "resistance","deflection","dodge","size","natural_armor","natural_armor_enhancement",
+            "circumstance","alchemical","untyped","defaultTyped"
+        ],
+        Literal["stack","no_stack_highest"]
+    ]] = None
+
+    # 5) Tie-breaker (when magnitudes equal or magnitudeExpr missing)
+    tieBreaker: Optional[Literal["latest", "highestCL", "highestLevel", "sourcePriority"]] = None
+
+    @model_validator(mode="after")
+    def _validate(self):
+        errs: list[str] = []
+        if self.familyPolicy and not self.familyKeys:
+            errs.append("familyPolicy requires non-empty familyKeys")
+        if self.named in ("no_stack_highest",) and not (self.magnitudeExpr or self.tieBreaker):
+            # Not strictly required, but warn authors toward deterministic behavior
+            pass
+        if "dodge" in (self.bonusTypePolicy or {}) and self.bonusTypePolicy["dodge"] != "stack":
+            errs.append("bonusTypePolicy for 'dodge' must be 'stack' (RAW)")
+        # If defaultTyped omitted, engine will use canonical default (no_stack_highest)
+        if errs:
+            raise ValueError("; ".join(errs))
+        return self
 
 # EffectDefinition
 class EffectDefinition(BaseModel):
@@ -434,7 +540,7 @@ class EffectDefinition(BaseModel):
     descriptors: List[str] = Field(default_factory=list)
     casterLevel: Optional[Expr] = None
     prerequisites: Optional[str] = None
-    stacking: Optional[Dict[str, Any]] = None
+    stacking: Optional[StackingPolicy] = None
     notes: Optional[str] = None
 
     activation: Optional[ActivationSpec] = None
@@ -442,7 +548,7 @@ class EffectDefinition(BaseModel):
     targetFilter: Optional[TargetFilter] = None
     area: Optional[AreaSpec] = None
 
-    when: Optional[str] = None  # "on activation" | "continuous" | "on trigger"
+    when: Optional[str] = None   # "on activation" | "continuous" | "on trigger"
     duration: Optional[DurationSpec] = None
     triggers: Optional[List[Dict[str, Any]]] = None
     recurring: Optional[Dict[str, Any]] = None
@@ -460,6 +566,48 @@ class EffectDefinition(BaseModel):
     srApplies: Optional[bool] = None
     antimagic: Optional[bool] = None
     dispellable: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def _validate_effect(self):
+        errs: list[str] = []
+
+        # 1) Duration rules accurate to RAW
+        has_instancey_bits = bool(self.modifiers or self.ruleHooks or self.operations)
+
+        is_passive = (
+            (self.activation and self.activation.action == "passive")
+            or (self.when is not None and self.when.lower().startswith("continuous"))
+        )
+
+        if self.abilityType in ("Spell", "Sp"):
+            # All spells/SLAs must declare a duration (even instantaneous)
+            if self.duration is None:
+                errs.append("Spell/Sp requires duration (use {type:'instantaneous'} if appropriate)")
+            else:
+                if self.duration.type == "concentration":
+                    if not (self.activation and self.activation.concentration):
+                        errs.append("duration.type 'concentration' requires activation.concentration=true for Spell/Sp")
+        else:
+            # Non-spell effects
+            if is_passive:
+                # Continuous passives may omit duration; recommended to use duration: permanent for clarity.
+                pass
+            else:
+                # Activated or triggered non-spell effects that attach anything should either:
+                # - declare duration (including 'instantaneous'), OR
+                # - mark when:'continuous'
+                if has_instancey_bits and self.duration is None and not self.when:
+                    errs.append("Activated/triggered non-spell effect with modifiers/hooks/ops must declare duration "
+                                "(including 'instantaneous') or set when:'continuous'")
+
+        # 2) SR consistency: only Spell/Sp can have SR gate applying
+        if self.gates and self.gates.sr and self.gates.sr.applies:
+            if self.abilityType not in ("Spell", "Sp"):
+                errs.append("gates.sr.applies=true is invalid unless abilityType is Spell or Sp")
+
+        if errs:
+            raise ValueError("; ".join(errs))
+        return self
 
 # ConditionDefinition
 class ConditionDefinition(BaseModel):

@@ -94,7 +94,6 @@
       "type": "string"
     },
     "capacity": {
-      "additionalProperties": true,
       "title": "Capacity",
       "type": "object"
     },
@@ -130,7 +129,6 @@
     "expiry": {
       "anyOf": [
         {
-          "additionalProperties": true,
           "type": "object"
         },
         {
@@ -143,7 +141,6 @@
     "absorption": {
       "anyOf": [
         {
-          "additionalProperties": true,
           "type": "object"
         },
         {
@@ -173,7 +170,6 @@
     "stacking": {
       "anyOf": [
         {
-          "additionalProperties": true,
           "type": "object"
         },
         {
