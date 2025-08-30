@@ -149,9 +149,9 @@ M1 — Project foundation and core models
   - [x] ZoneDefinition tightening
     - [x] shape != none; duration rules (instant vs timed); hooks scopes limited to on-enter/on-leave/scheduler/incoming.effect
     - [x] suppression fields enum (antimagic, spell_globe:<=N, etc.)
-  - [ ] Expression prevalidation
-    - [ ] Parse all Expr fields at load; allowlist functions (min, max, floor, ceil, ability_mod, level, class_level, caster_level, initiator_level, hd)
-    - [ ] Unknown symbols/functions produce validation errors under --strict-expr
+  - [x] Expression prevalidation
+    - [x] Parse all Expr fields at load; allowlist functions (min, max, floor, ceil, ability_mod, level, class_level, caster_level, initiator_level, hd)
+    - [x] Unknown symbols/functions produce validation errors under --strict-expr
   - [ ] Cross-reference validation
     - [ ] Verify references exist: condition ids, resource ids, zone ids, item ids, kit ids, effect ids
     - [ ] Warn on unused content ids
