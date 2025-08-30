@@ -1,3 +1,4 @@
+import random
 from pydantic import BaseModel, Field
 from .models import Entity, Abilities, AbilityScore, Size, Item
 from .loader import ContentIndex
@@ -5,9 +6,18 @@ from .loader import ContentIndex
 class GameState(BaseModel):
     player: Entity
     log: list[str] = Field(default_factory=list)
+    seed: int = Field(default_factory=lambda: random.randint(0, 2**32 - 1))
+    rng_state: tuple = Field(default_factory=lambda: random.getstate())
 
     def resources_summary(self) -> dict[str, int]:
         return {"Spell Slots (1st)": 2, "Turn Attempts": 3}
+
+    def initialize_rng(self):
+        random.setstate(self.rng_state)
+
+    def update_rng_state(self):
+        self.rng_state = random.getstate()
+
 
 def default_cleric_lvl1(content: ContentIndex) -> Entity:
     abilities = Abilities(
@@ -35,4 +45,7 @@ def default_cleric_lvl1(content: ContentIndex) -> Entity:
     return ent
 
 def default_state(content: ContentIndex) -> GameState:
-    return GameState(player=default_cleric_lvl1(content))
+    game_state = GameState(player=default_cleric_lvl1(content))
+    random.seed(game_state.seed)
+    game_state.update_rng_state()
+    return game_state

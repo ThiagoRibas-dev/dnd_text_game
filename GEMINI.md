@@ -15,7 +15,7 @@ A central "Mode Manager" handles transitions between these states. The game will
 
 ### Notes and Rules ###
 
-**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail, consider possibilities, brainstorm), Iteration > request and wait permission to Execute/Implement > Update Roadmap > Summarize changes > Ask for next step.
+**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail, consider possibilities, brainstorm), Iteration > request and wait permission to Execute/Implement > Update Roadmap (GEMINI.md file) > Summarize changes > Ask for next step.
 
 **Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why). Only once the plan has been accepted, we will execute the plan and edit the files in question.
 
@@ -120,7 +120,7 @@ M1 — Project foundation and core models
   - [x] Pre-commit hook: run validate-content on changed files  
 - [ ] Schema hardening & content lints
   - [ ] Operations: switch from free-form params to a discriminated union
-    - [ ] Define op kinds (damage, heal, condition.apply/remove, resource.create/spend/restore, zone.create, save, attach/detach, move/teleport, transform, dispel/suppress, schedule, etc.)
+    - [x] Define op kinds (damage, heal, condition.apply/remove, resource.create/spend/restore, zone.create, save, attach/detach, move/teleport, transform, dispel/suppress, schedule, etc.)
     - [ ] Per-op required/optional fields (e.g., damage: amount, type; save: type, dc, onSuccess/onFail actions)
   - [ ] RuleHook.action: typed action union
     - [ ] Actions (modify, reroll, cap, multiply, reflect/redirect, absorbIntoPool, setOutcome, save, condition.apply/remove, resource.*, schedule)
