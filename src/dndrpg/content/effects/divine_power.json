@@ -13,6 +13,6 @@
     { "targetPath": "combat.bab.effective", "operator": "max", "value": "level()" }
   ],
   "operations": [
-    { "op": "resource.create_temp_hp", "params": { "amount": "caster_level()" } }
+    { "op": "temp_hp", "amount": "caster_level()" }
   ]
 }

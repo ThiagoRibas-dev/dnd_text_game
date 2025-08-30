@@ -119,9 +119,9 @@ M1 — Project foundation and core models
   - [x] CI: run validate-content on PRs; fail on schema or parse errors
   - [x] Pre-commit hook: run validate-content on changed files  
 - [ ] Schema hardening & content lints
-  - [ ] Operations: switch from free-form params to a discriminated union
+  - [x] Operations: switch from free-form params to a discriminated union
     - [x] Define op kinds (damage, heal, condition.apply/remove, resource.create/spend/restore, zone.create, save, attach/detach, move/teleport, transform, dispel/suppress, schedule, etc.)
-    - [ ] Per-op required/optional fields (e.g., damage: amount, type; save: type, dc, onSuccess/onFail actions)
+    - [x] Per-op required/optional fields (e.g., damage: amount, type; save: type, dc, onSuccess/onFail actions)
   - [ ] RuleHook.action: typed action union
     - [ ] Actions (modify, reroll, cap, multiply, reflect/redirect, absorbIntoPool, setOutcome, save, condition.apply/remove, resource.*, schedule)
     - [ ] Validate allowed actions per hook scope

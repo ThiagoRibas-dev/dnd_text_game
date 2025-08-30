@@ -429,22 +429,1180 @@
       "title": "Modifier",
       "type": "object"
     },
-    "Operation": {
+    "OpAttachEffect": {
       "properties": {
         "op": {
+          "const": "attach",
+          "default": "attach",
           "title": "Op",
           "type": "string"
+        },
+        "effect_id": {
+          "title": "Effect Id",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "enum": [
+                "self",
+                "target"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        }
+      },
+      "required": [
+        "effect_id"
+      ],
+      "title": "OpAttachEffect",
+      "type": "object"
+    },
+    "OpConditionApply": {
+      "properties": {
+        "op": {
+          "const": "condition.apply",
+          "default": "condition.apply",
+          "title": "Op",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DurationSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "params": {
           "additionalProperties": true,
           "title": "Params",
           "type": "object"
+        },
+        "stacks": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stacks"
         }
       },
       "required": [
-        "op"
+        "id"
       ],
-      "title": "Operation",
+      "title": "OpConditionApply",
+      "type": "object"
+    },
+    "OpConditionRemove": {
+      "properties": {
+        "op": {
+          "const": "condition.remove",
+          "default": "condition.remove",
+          "title": "Op",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "OpConditionRemove",
+      "type": "object"
+    },
+    "OpDamage": {
+      "properties": {
+        "op": {
+          "const": "damage",
+          "default": "damage",
+          "title": "Op",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Amount"
+        },
+        "damage_type": {
+          "default": "typeless",
+          "enum": [
+            "physical.bludgeoning",
+            "physical.piercing",
+            "physical.slashing",
+            "fire",
+            "cold",
+            "acid",
+            "electricity",
+            "sonic",
+            "force",
+            "negative",
+            "positive",
+            "nonlethal",
+            "bleed",
+            "typeless"
+          ],
+          "title": "Damage Type",
+          "type": "string"
+        },
+        "counts_as_magic": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Counts As Magic"
+        },
+        "counts_as_material": {
+          "anyOf": [
+            {
+              "items": {
+                "enum": [
+                  "adamantine",
+                  "silver",
+                  "cold-iron"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Counts As Material"
+        },
+        "counts_as_alignment": {
+          "anyOf": [
+            {
+              "items": {
+                "enum": [
+                  "good",
+                  "evil",
+                  "law",
+                  "chaos"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Counts As Alignment"
+        },
+        "nonlethal": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nonlethal"
+        }
+      },
+      "required": [
+        "amount"
+      ],
+      "title": "OpDamage",
+      "type": "object"
+    },
+    "OpDetachEffect": {
+      "properties": {
+        "op": {
+          "const": "detach",
+          "default": "detach",
+          "title": "Op",
+          "type": "string"
+        },
+        "effect_id": {
+          "title": "Effect Id",
+          "type": "string"
+        },
+        "all_instances": {
+          "default": false,
+          "title": "All Instances",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "effect_id"
+      ],
+      "title": "OpDetachEffect",
+      "type": "object"
+    },
+    "OpDispel": {
+      "properties": {
+        "op": {
+          "const": "dispel",
+          "default": "dispel",
+          "title": "Op",
+          "type": "string"
+        },
+        "effect_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effect Id"
+        },
+        "max_cl": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cl"
+        }
+      },
+      "title": "OpDispel",
+      "type": "object"
+    },
+    "OpHealHP": {
+      "properties": {
+        "op": {
+          "const": "heal_hp",
+          "default": "heal_hp",
+          "title": "Op",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Amount"
+        },
+        "nonlethal_only": {
+          "default": false,
+          "title": "Nonlethal Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "amount"
+      ],
+      "title": "OpHealHP",
+      "type": "object"
+    },
+    "OpMove": {
+      "properties": {
+        "op": {
+          "const": "move",
+          "default": "move",
+          "title": "Op",
+          "type": "string"
+        },
+        "dx": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dx"
+        },
+        "dy": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dy"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To"
+        },
+        "forced": {
+          "default": false,
+          "title": "Forced",
+          "type": "boolean"
+        }
+      },
+      "title": "OpMove",
+      "type": "object"
+    },
+    "OpResourceCreate": {
+      "properties": {
+        "op": {
+          "const": "resource.create",
+          "default": "resource.create",
+          "title": "Op",
+          "type": "string"
+        },
+        "resource_id": {
+          "title": "Resource Id",
+          "type": "string"
+        },
+        "owner_scope": {
+          "anyOf": [
+            {
+              "enum": [
+                "entity",
+                "effect-instance",
+                "item",
+                "zone"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner Scope"
+        },
+        "initial_current": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Initial Current"
+        }
+      },
+      "required": [
+        "resource_id"
+      ],
+      "title": "OpResourceCreate",
+      "type": "object"
+    },
+    "OpResourceRestore": {
+      "properties": {
+        "op": {
+          "const": "resource.restore",
+          "default": "resource.restore",
+          "title": "Op",
+          "type": "string"
+        },
+        "resource_id": {
+          "title": "Resource Id",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "to_max": {
+          "default": false,
+          "title": "To Max",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "resource_id"
+      ],
+      "title": "OpResourceRestore",
+      "type": "object"
+    },
+    "OpResourceSet": {
+      "properties": {
+        "op": {
+          "const": "resource.set",
+          "default": "resource.set",
+          "title": "Op",
+          "type": "string"
+        },
+        "resource_id": {
+          "title": "Resource Id",
+          "type": "string"
+        },
+        "current": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Current"
+        }
+      },
+      "required": [
+        "resource_id",
+        "current"
+      ],
+      "title": "OpResourceSet",
+      "type": "object"
+    },
+    "OpResourceSpend": {
+      "properties": {
+        "op": {
+          "const": "resource.spend",
+          "default": "resource.spend",
+          "title": "Op",
+          "type": "string"
+        },
+        "resource_id": {
+          "title": "Resource Id",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Amount"
+        }
+      },
+      "required": [
+        "resource_id",
+        "amount"
+      ],
+      "title": "OpResourceSpend",
+      "type": "object"
+    },
+    "OpSave": {
+      "properties": {
+        "op": {
+          "const": "save",
+          "default": "save",
+          "title": "Op",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "Fort",
+            "Ref",
+            "Will"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "dc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Dc"
+        },
+        "on_success": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "attach": "#/$defs/OpAttachEffect",
+                "condition.apply": "#/$defs/OpConditionApply",
+                "condition.remove": "#/$defs/OpConditionRemove",
+                "damage": "#/$defs/OpDamage",
+                "detach": "#/$defs/OpDetachEffect",
+                "dispel": "#/$defs/OpDispel",
+                "heal_hp": "#/$defs/OpHealHP",
+                "move": "#/$defs/OpMove",
+                "resource.create": "#/$defs/OpResourceCreate",
+                "resource.restore": "#/$defs/OpResourceRestore",
+                "resource.set": "#/$defs/OpResourceSet",
+                "resource.spend": "#/$defs/OpResourceSpend",
+                "save": "#/$defs/OpSave",
+                "schedule": "#/$defs/OpSchedule",
+                "suppress": "#/$defs/OpSuppress",
+                "teleport": "#/$defs/OpTeleport",
+                "temp_hp": "#/$defs/OpTempHP",
+                "transform": "#/$defs/OpTransform",
+                "unsuppress": "#/$defs/OpUnsuppress",
+                "zone.create": "#/$defs/OpZoneCreate",
+                "zone.destroy": "#/$defs/OpZoneDestroy"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/OpDamage"
+              },
+              {
+                "$ref": "#/$defs/OpHealHP"
+              },
+              {
+                "$ref": "#/$defs/OpTempHP"
+              },
+              {
+                "$ref": "#/$defs/OpConditionApply"
+              },
+              {
+                "$ref": "#/$defs/OpConditionRemove"
+              },
+              {
+                "$ref": "#/$defs/OpResourceCreate"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSpend"
+              },
+              {
+                "$ref": "#/$defs/OpResourceRestore"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSet"
+              },
+              {
+                "$ref": "#/$defs/OpZoneCreate"
+              },
+              {
+                "$ref": "#/$defs/OpZoneDestroy"
+              },
+              {
+                "$ref": "#/$defs/OpSave"
+              },
+              {
+                "$ref": "#/$defs/OpAttachEffect"
+              },
+              {
+                "$ref": "#/$defs/OpDetachEffect"
+              },
+              {
+                "$ref": "#/$defs/OpMove"
+              },
+              {
+                "$ref": "#/$defs/OpTeleport"
+              },
+              {
+                "$ref": "#/$defs/OpTransform"
+              },
+              {
+                "$ref": "#/$defs/OpDispel"
+              },
+              {
+                "$ref": "#/$defs/OpSuppress"
+              },
+              {
+                "$ref": "#/$defs/OpUnsuppress"
+              },
+              {
+                "$ref": "#/$defs/OpSchedule"
+              }
+            ]
+          },
+          "title": "On Success",
+          "type": "array"
+        },
+        "on_fail": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "attach": "#/$defs/OpAttachEffect",
+                "condition.apply": "#/$defs/OpConditionApply",
+                "condition.remove": "#/$defs/OpConditionRemove",
+                "damage": "#/$defs/OpDamage",
+                "detach": "#/$defs/OpDetachEffect",
+                "dispel": "#/$defs/OpDispel",
+                "heal_hp": "#/$defs/OpHealHP",
+                "move": "#/$defs/OpMove",
+                "resource.create": "#/$defs/OpResourceCreate",
+                "resource.restore": "#/$defs/OpResourceRestore",
+                "resource.set": "#/$defs/OpResourceSet",
+                "resource.spend": "#/$defs/OpResourceSpend",
+                "save": "#/$defs/OpSave",
+                "schedule": "#/$defs/OpSchedule",
+                "suppress": "#/$defs/OpSuppress",
+                "teleport": "#/$defs/OpTeleport",
+                "temp_hp": "#/$defs/OpTempHP",
+                "transform": "#/$defs/OpTransform",
+                "unsuppress": "#/$defs/OpUnsuppress",
+                "zone.create": "#/$defs/OpZoneCreate",
+                "zone.destroy": "#/$defs/OpZoneDestroy"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/OpDamage"
+              },
+              {
+                "$ref": "#/$defs/OpHealHP"
+              },
+              {
+                "$ref": "#/$defs/OpTempHP"
+              },
+              {
+                "$ref": "#/$defs/OpConditionApply"
+              },
+              {
+                "$ref": "#/$defs/OpConditionRemove"
+              },
+              {
+                "$ref": "#/$defs/OpResourceCreate"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSpend"
+              },
+              {
+                "$ref": "#/$defs/OpResourceRestore"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSet"
+              },
+              {
+                "$ref": "#/$defs/OpZoneCreate"
+              },
+              {
+                "$ref": "#/$defs/OpZoneDestroy"
+              },
+              {
+                "$ref": "#/$defs/OpSave"
+              },
+              {
+                "$ref": "#/$defs/OpAttachEffect"
+              },
+              {
+                "$ref": "#/$defs/OpDetachEffect"
+              },
+              {
+                "$ref": "#/$defs/OpMove"
+              },
+              {
+                "$ref": "#/$defs/OpTeleport"
+              },
+              {
+                "$ref": "#/$defs/OpTransform"
+              },
+              {
+                "$ref": "#/$defs/OpDispel"
+              },
+              {
+                "$ref": "#/$defs/OpSuppress"
+              },
+              {
+                "$ref": "#/$defs/OpUnsuppress"
+              },
+              {
+                "$ref": "#/$defs/OpSchedule"
+              }
+            ]
+          },
+          "title": "On Fail",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "OpSave",
+      "type": "object"
+    },
+    "OpSchedule": {
+      "properties": {
+        "op": {
+          "const": "schedule",
+          "default": "schedule",
+          "title": "Op",
+          "type": "string"
+        },
+        "after": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DurationSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "delay_rounds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delay Rounds"
+        },
+        "actions": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "attach": "#/$defs/OpAttachEffect",
+                "condition.apply": "#/$defs/OpConditionApply",
+                "condition.remove": "#/$defs/OpConditionRemove",
+                "damage": "#/$defs/OpDamage",
+                "detach": "#/$defs/OpDetachEffect",
+                "dispel": "#/$defs/OpDispel",
+                "heal_hp": "#/$defs/OpHealHP",
+                "move": "#/$defs/OpMove",
+                "resource.create": "#/$defs/OpResourceCreate",
+                "resource.restore": "#/$defs/OpResourceRestore",
+                "resource.set": "#/$defs/OpResourceSet",
+                "resource.spend": "#/$defs/OpResourceSpend",
+                "save": "#/$defs/OpSave",
+                "schedule": "#/$defs/OpSchedule",
+                "suppress": "#/$defs/OpSuppress",
+                "teleport": "#/$defs/OpTeleport",
+                "temp_hp": "#/$defs/OpTempHP",
+                "transform": "#/$defs/OpTransform",
+                "unsuppress": "#/$defs/OpUnsuppress",
+                "zone.create": "#/$defs/OpZoneCreate",
+                "zone.destroy": "#/$defs/OpZoneDestroy"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/OpDamage"
+              },
+              {
+                "$ref": "#/$defs/OpHealHP"
+              },
+              {
+                "$ref": "#/$defs/OpTempHP"
+              },
+              {
+                "$ref": "#/$defs/OpConditionApply"
+              },
+              {
+                "$ref": "#/$defs/OpConditionRemove"
+              },
+              {
+                "$ref": "#/$defs/OpResourceCreate"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSpend"
+              },
+              {
+                "$ref": "#/$defs/OpResourceRestore"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSet"
+              },
+              {
+                "$ref": "#/$defs/OpZoneCreate"
+              },
+              {
+                "$ref": "#/$defs/OpZoneDestroy"
+              },
+              {
+                "$ref": "#/$defs/OpSave"
+              },
+              {
+                "$ref": "#/$defs/OpAttachEffect"
+              },
+              {
+                "$ref": "#/$defs/OpDetachEffect"
+              },
+              {
+                "$ref": "#/$defs/OpMove"
+              },
+              {
+                "$ref": "#/$defs/OpTeleport"
+              },
+              {
+                "$ref": "#/$defs/OpTransform"
+              },
+              {
+                "$ref": "#/$defs/OpDispel"
+              },
+              {
+                "$ref": "#/$defs/OpSuppress"
+              },
+              {
+                "$ref": "#/$defs/OpUnsuppress"
+              },
+              {
+                "$ref": "#/$defs/OpSchedule"
+              }
+            ]
+          },
+          "title": "Actions",
+          "type": "array"
+        }
+      },
+      "title": "OpSchedule",
+      "type": "object"
+    },
+    "OpSuppress": {
+      "properties": {
+        "op": {
+          "const": "suppress",
+          "default": "suppress",
+          "title": "Op",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "effect",
+            "item",
+            "zone"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "duration": {
+          "$ref": "#/$defs/DurationSpec"
+        }
+      },
+      "required": [
+        "target",
+        "duration"
+      ],
+      "title": "OpSuppress",
+      "type": "object"
+    },
+    "OpTeleport": {
+      "properties": {
+        "op": {
+          "const": "teleport",
+          "default": "teleport",
+          "title": "Op",
+          "type": "string"
+        },
+        "to": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "To",
+          "type": "array"
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "title": "OpTeleport",
+      "type": "object"
+    },
+    "OpTempHP": {
+      "properties": {
+        "op": {
+          "const": "temp_hp",
+          "default": "temp_hp",
+          "title": "Op",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Amount"
+        }
+      },
+      "required": [
+        "amount"
+      ],
+      "title": "OpTempHP",
+      "type": "object"
+    },
+    "OpTransform": {
+      "properties": {
+        "op": {
+          "const": "transform",
+          "default": "transform",
+          "title": "Op",
+          "type": "string"
+        },
+        "form_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Form Id"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size"
+        },
+        "set_stats": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Set Stats"
+        }
+      },
+      "title": "OpTransform",
+      "type": "object"
+    },
+    "OpUnsuppress": {
+      "properties": {
+        "op": {
+          "const": "unsuppress",
+          "default": "unsuppress",
+          "title": "Op",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "effect",
+            "item",
+            "zone"
+          ],
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target"
+      ],
+      "title": "OpUnsuppress",
+      "type": "object"
+    },
+    "OpZoneCreate": {
+      "properties": {
+        "op": {
+          "const": "zone.create",
+          "default": "zone.create",
+          "title": "Op",
+          "type": "string"
+        },
+        "zone_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zone Id"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "shape": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AreaSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DurationSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "hooks": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RuleHook"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hooks"
+        }
+      },
+      "title": "OpZoneCreate",
+      "type": "object"
+    },
+    "OpZoneDestroy": {
+      "properties": {
+        "op": {
+          "const": "zone.destroy",
+          "default": "zone.destroy",
+          "title": "Op",
+          "type": "string"
+        },
+        "zone_instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zone Instance Id"
+        },
+        "zone_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zone Id"
+        }
+      },
+      "title": "OpZoneDestroy",
       "type": "object"
     },
     "RangeSpec": {
@@ -508,8 +1666,97 @@
         },
         "action": {
           "items": {
-            "additionalProperties": true,
-            "type": "object"
+            "discriminator": {
+              "mapping": {
+                "attach": "#/$defs/OpAttachEffect",
+                "condition.apply": "#/$defs/OpConditionApply",
+                "condition.remove": "#/$defs/OpConditionRemove",
+                "damage": "#/$defs/OpDamage",
+                "detach": "#/$defs/OpDetachEffect",
+                "dispel": "#/$defs/OpDispel",
+                "heal_hp": "#/$defs/OpHealHP",
+                "move": "#/$defs/OpMove",
+                "resource.create": "#/$defs/OpResourceCreate",
+                "resource.restore": "#/$defs/OpResourceRestore",
+                "resource.set": "#/$defs/OpResourceSet",
+                "resource.spend": "#/$defs/OpResourceSpend",
+                "save": "#/$defs/OpSave",
+                "schedule": "#/$defs/OpSchedule",
+                "suppress": "#/$defs/OpSuppress",
+                "teleport": "#/$defs/OpTeleport",
+                "temp_hp": "#/$defs/OpTempHP",
+                "transform": "#/$defs/OpTransform",
+                "unsuppress": "#/$defs/OpUnsuppress",
+                "zone.create": "#/$defs/OpZoneCreate",
+                "zone.destroy": "#/$defs/OpZoneDestroy"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/OpDamage"
+              },
+              {
+                "$ref": "#/$defs/OpHealHP"
+              },
+              {
+                "$ref": "#/$defs/OpTempHP"
+              },
+              {
+                "$ref": "#/$defs/OpConditionApply"
+              },
+              {
+                "$ref": "#/$defs/OpConditionRemove"
+              },
+              {
+                "$ref": "#/$defs/OpResourceCreate"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSpend"
+              },
+              {
+                "$ref": "#/$defs/OpResourceRestore"
+              },
+              {
+                "$ref": "#/$defs/OpResourceSet"
+              },
+              {
+                "$ref": "#/$defs/OpZoneCreate"
+              },
+              {
+                "$ref": "#/$defs/OpZoneDestroy"
+              },
+              {
+                "$ref": "#/$defs/OpSave"
+              },
+              {
+                "$ref": "#/$defs/OpAttachEffect"
+              },
+              {
+                "$ref": "#/$defs/OpDetachEffect"
+              },
+              {
+                "$ref": "#/$defs/OpMove"
+              },
+              {
+                "$ref": "#/$defs/OpTeleport"
+              },
+              {
+                "$ref": "#/$defs/OpTransform"
+              },
+              {
+                "$ref": "#/$defs/OpDispel"
+              },
+              {
+                "$ref": "#/$defs/OpSuppress"
+              },
+              {
+                "$ref": "#/$defs/OpUnsuppress"
+              },
+              {
+                "$ref": "#/$defs/OpSchedule"
+              }
+            ]
           },
           "title": "Action",
           "type": "array"
@@ -1002,7 +2249,97 @@
     },
     "operations": {
       "items": {
-        "$ref": "#/$defs/Operation"
+        "discriminator": {
+          "mapping": {
+            "attach": "#/$defs/OpAttachEffect",
+            "condition.apply": "#/$defs/OpConditionApply",
+            "condition.remove": "#/$defs/OpConditionRemove",
+            "damage": "#/$defs/OpDamage",
+            "detach": "#/$defs/OpDetachEffect",
+            "dispel": "#/$defs/OpDispel",
+            "heal_hp": "#/$defs/OpHealHP",
+            "move": "#/$defs/OpMove",
+            "resource.create": "#/$defs/OpResourceCreate",
+            "resource.restore": "#/$defs/OpResourceRestore",
+            "resource.set": "#/$defs/OpResourceSet",
+            "resource.spend": "#/$defs/OpResourceSpend",
+            "save": "#/$defs/OpSave",
+            "schedule": "#/$defs/OpSchedule",
+            "suppress": "#/$defs/OpSuppress",
+            "teleport": "#/$defs/OpTeleport",
+            "temp_hp": "#/$defs/OpTempHP",
+            "transform": "#/$defs/OpTransform",
+            "unsuppress": "#/$defs/OpUnsuppress",
+            "zone.create": "#/$defs/OpZoneCreate",
+            "zone.destroy": "#/$defs/OpZoneDestroy"
+          },
+          "propertyName": "op"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/OpDamage"
+          },
+          {
+            "$ref": "#/$defs/OpHealHP"
+          },
+          {
+            "$ref": "#/$defs/OpTempHP"
+          },
+          {
+            "$ref": "#/$defs/OpConditionApply"
+          },
+          {
+            "$ref": "#/$defs/OpConditionRemove"
+          },
+          {
+            "$ref": "#/$defs/OpResourceCreate"
+          },
+          {
+            "$ref": "#/$defs/OpResourceSpend"
+          },
+          {
+            "$ref": "#/$defs/OpResourceRestore"
+          },
+          {
+            "$ref": "#/$defs/OpResourceSet"
+          },
+          {
+            "$ref": "#/$defs/OpZoneCreate"
+          },
+          {
+            "$ref": "#/$defs/OpZoneDestroy"
+          },
+          {
+            "$ref": "#/$defs/OpSave"
+          },
+          {
+            "$ref": "#/$defs/OpAttachEffect"
+          },
+          {
+            "$ref": "#/$defs/OpDetachEffect"
+          },
+          {
+            "$ref": "#/$defs/OpMove"
+          },
+          {
+            "$ref": "#/$defs/OpTeleport"
+          },
+          {
+            "$ref": "#/$defs/OpTransform"
+          },
+          {
+            "$ref": "#/$defs/OpDispel"
+          },
+          {
+            "$ref": "#/$defs/OpSuppress"
+          },
+          {
+            "$ref": "#/$defs/OpUnsuppress"
+          },
+          {
+            "$ref": "#/$defs/OpSchedule"
+          }
+        ]
       },
       "title": "Operations",
       "type": "array"

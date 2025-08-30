@@ -7,9 +7,8 @@ hooks:
     match: { event: "startOfTurn(occupant)" }
     action:
       - op: "save"
-        params:
-          type: "Ref"
-          dc: "10 + 1 + ability_mod('int')"   # adjust per your caster
-          onFail:
-            - op: "condition.apply"
-              params: { id: "cond.prone" }
+        type: "Ref"
+        dc: "10 + 1 + ability_mod('int')"   # adjust per your caster
+        on_fail:
+          - op: "condition.apply"
+            id: "cond.prone"
