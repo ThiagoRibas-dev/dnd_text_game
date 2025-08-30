@@ -238,6 +238,68 @@ Operation = Annotated[
     Field(discriminator="op")
 ]
 
+class ActModify(BaseModel):
+    op: Literal["modify"] = "modify"
+    targetPath: str
+    operator: ModifierOperator  # "add" | "set" | "multiply" | ...
+    value: Expr
+    bonusType: Optional[BonusType] = None  # optional; mostly for clarity in logs
+
+class ActReroll(BaseModel):
+    op: Literal["reroll"] = "reroll"
+    what: Literal["attack_roll", "miss_chance", "save", "crit_confirm", "skill_check"]
+    keep: Literal["best", "success"] = "best"  # success = keep successful result if either succeeds
+
+class ActCap(BaseModel):
+    op: Literal["cap"] = "cap"
+    target: Literal["incoming_damage", "outgoing_damage", "attack_roll", "damage_roll"]
+    amount: Expr  # maximum allowed
+
+class ActMultiply(BaseModel):
+    op: Literal["multiply"] = "multiply"
+    target: Literal["incoming_damage", "outgoing_damage", "attack_roll", "damage_roll"]
+    factor: Expr  # e.g., 0.5 for resistance-like, 1.5 for vulnerability-like
+
+class ActReflect(BaseModel):
+    op: Literal["reflect"] = "reflect"
+    what: Literal["damage", "effect"] = "damage"
+    percent: int = 100  # 0–100
+    to: Literal["source", "self"] = "source"  # simple routing
+
+class ActRedirect(BaseModel):
+    op: Literal["redirect"] = "redirect"
+    what: Literal["damage", "effect"] = "damage"
+    to: Literal["source", "self"] = "source"
+
+class ActAbsorbIntoPool(BaseModel):
+    op: Literal["absorbIntoPool"] = "absorbIntoPool"
+    resource_id: str
+    up_to: Expr                       # max amount to absorb
+    damage_types: Optional[List[DamageKind]] = None  # if absent, absorb any
+
+class ActSetOutcome(BaseModel):
+    op: Literal["setOutcome"] = "setOutcome"
+    kind: Literal[
+        "block", "allow",          # targeting / incoming.effect / resource hooks
+        "negate",                  # incoming.damage -> set to 0
+        "hit", "miss",             # on.attack
+        "success", "failure",      # on.save / on.crit (confirm)
+        "suppress", "unsuppress"   # suppression
+    ]
+    note: Optional[str] = None
+
+# HookAction union = hook-specific actions + a subset of Operation union you want to allow in hooks
+HookAction = Annotated[
+    Union[
+        ActModify, ActReroll, ActCap, ActMultiply, ActReflect, ActRedirect, ActAbsorbIntoPool, ActSetOutcome,
+        # Reuse operation types that make sense in hooks:
+        OpSave, OpConditionApply, OpConditionRemove,
+        OpResourceCreate, OpResourceSpend, OpResourceRestore, OpResourceSet,
+        OpSchedule, OpDispel, OpSuppress, OpUnsuppress
+    ],
+    Field(discriminator="op")
+]
+
 # Rule Hooks (generic: match + actions)
 HookScope = Literal["targeting", "incoming.effect", "incoming.condition", "incoming.damage",
                     "on.save", "on.attack", "on.damageDealt", "on.damageTaken", "on.crit",
@@ -246,9 +308,61 @@ HookScope = Literal["targeting", "incoming.effect", "incoming.condition", "incom
 class RuleHook(BaseModel):
     scope: HookScope
     match: Dict[str, Any] = Field(default_factory=dict)
-    action: List[Operation] = Field(default_factory=list)  # now typed via the same op union
+    action: List[HookAction] = Field(default_factory=list)
     priority: Optional[int] = None
     duration: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def _validate_actions_for_scope(self):
+        # Map scopes to allowed op names
+        allowed: Dict[str, List[str]] = {
+            "targeting": ["setOutcome"],
+            "incoming.effect": ["setOutcome", "save", "condition.apply", "condition.remove",
+                                "resource.create", "resource.spend", "resource.restore", "resource.set",
+                                "schedule", "dispel", "suppress", "unsuppress"],
+            "incoming.damage": ["cap", "multiply", "reflect", "redirect", "absorbIntoPool",
+                                "setOutcome", "resource.restore", "resource.spend", "schedule"],
+            "on.save": ["reroll", "setOutcome", "resource.spend", "resource.restore",
+                        "schedule", "condition.apply", "condition.remove"],
+            "on.attack": ["modify", "reroll", "setOutcome", "resource.spend", "resource.restore", "schedule"],
+            "on.damageDealt": ["cap", "multiply", "reflect", "resource.spend", "resource.restore",
+                               "schedule", "condition.apply", "condition.remove"],
+            "on.damageTaken": ["cap", "multiply", "reflect", "absorbIntoPool",
+                               "resource.spend", "resource.restore", "schedule", "condition.apply", "condition.remove"],
+            "on.crit": ["reroll", "setOutcome", "modify", "resource.spend", "resource.restore", "schedule"],
+            "on.maneuverGrant": ["setOutcome", "resource.spend", "resource.restore", "schedule"],
+            "scheduler": ["save", "condition.apply", "condition.remove", "resource.spend", "resource.restore", "schedule"],
+            "suppression": ["setOutcome", "suppress", "unsuppress", "dispel", "schedule"],
+            "resource": ["setOutcome", "resource.spend", "resource.restore", "schedule"],
+        }
+        # Allowed set for this hook
+        allow = set(allowed.get(self.scope, []))
+
+        # Helper for setOutcome kind per scope
+        kind_allowed: Dict[str, List[str]] = {
+            "targeting": ["block", "allow"],
+            "incoming.effect": ["block", "allow", "suppress"],
+            "incoming.damage": ["negate"],
+            "on.save": ["success", "failure"],
+            "on.attack": ["hit", "miss"],
+            "on.crit": ["success", "failure"],
+            "suppression": ["suppress", "unsuppress"],
+            "resource": ["block", "allow"],
+        }
+
+        errs: List[str] = []
+        for a in self.action:
+            opname = getattr(a, "op", "")
+            if opname not in allow:
+                errs.append(f"Action '{opname}' not allowed in scope '{self.scope}'")
+            # Additional check for setOutcome kinds
+            if opname == "setOutcome":
+                kinds = set(kind_allowed.get(self.scope, []))
+                if kinds and getattr(a, "kind", None) not in kinds:
+                    errs.append(f"setOutcome.kind '{getattr(a, 'kind', None)}' invalid for scope '{self.scope}' (allowed: {sorted(kinds)})")
+        if errs:
+            raise ValueError("; ".join(errs))
+        return self
 
 
 # Duration/Range/Area/Targeting
@@ -297,7 +411,7 @@ class SRGate(BaseModel):
 
 class SaveGate(BaseModel):
     type: SaveType
-    dcExpression: str = Field(validation_alias=AliasChoices("dc", "dcExpression"))
+    dcExpression: str = Field(validation_alias=AliasChoices("dc", "dcExpression")),
     effect: GateBranch = "negates"
 
 class AttackGate(BaseModel):
@@ -405,3 +519,14 @@ class ZoneDefinition(BaseModel):
     suppression: Optional[Dict[str, Any]] = None
     owner_tags: Optional[List[str]] = None
     notes: Optional[str] = None
+
+ActModify.model_rebuild()
+ActReroll.model_rebuild()
+ActCap.model_rebuild()
+ActMultiply.model_rebuild()
+ActReflect.model_rebuild()
+ActRedirect.model_rebuild()
+ActAbsorbIntoPool.model_rebuild()
+ActSetOutcome.model_rebuild()
+HookAction.__args__  # no-op to keep linters quiet
+RuleHook.model_rebuild()

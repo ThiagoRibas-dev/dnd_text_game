@@ -122,9 +122,9 @@ M1 — Project foundation and core models
   - [x] Operations: switch from free-form params to a discriminated union
     - [x] Define op kinds (damage, heal, condition.apply/remove, resource.create/spend/restore, zone.create, save, attach/detach, move/teleport, transform, dispel/suppress, schedule, etc.)
     - [x] Per-op required/optional fields (e.g., damage: amount, type; save: type, dc, onSuccess/onFail actions)
-  - [ ] RuleHook.action: typed action union
-    - [ ] Actions (modify, reroll, cap, multiply, reflect/redirect, absorbIntoPool, setOutcome, save, condition.apply/remove, resource.*, schedule)
-    - [ ] Validate allowed actions per hook scope
+  - [x] RuleHook.action: typed action union
+    - [x] Actions (modify, reroll, cap, multiply, reflect/redirect, absorbIntoPool, setOutcome, save, condition.apply/remove, resource.*, schedule)
+    - [x] Validate allowed actions per hook scope
   - [ ] EffectDefinition tightening
     - [ ] range.type == "fixed-ft" → require distance_ft
     - [ ] area.shape constraints (require size_ft or radius_ft/length_ft/width_ft as appropriate)

@@ -1,5 +1,377 @@
 {
   "$defs": {
+    "ActAbsorbIntoPool": {
+      "properties": {
+        "op": {
+          "const": "absorbIntoPool",
+          "default": "absorbIntoPool",
+          "title": "Op",
+          "type": "string"
+        },
+        "resource_id": {
+          "title": "Resource Id",
+          "type": "string"
+        },
+        "up_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Up To"
+        },
+        "damage_types": {
+          "anyOf": [
+            {
+              "items": {
+                "enum": [
+                  "physical.bludgeoning",
+                  "physical.piercing",
+                  "physical.slashing",
+                  "fire",
+                  "cold",
+                  "acid",
+                  "electricity",
+                  "sonic",
+                  "force",
+                  "negative",
+                  "positive",
+                  "nonlethal",
+                  "bleed",
+                  "typeless"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Damage Types"
+        }
+      },
+      "required": [
+        "resource_id",
+        "up_to"
+      ],
+      "title": "ActAbsorbIntoPool",
+      "type": "object"
+    },
+    "ActCap": {
+      "properties": {
+        "op": {
+          "const": "cap",
+          "default": "cap",
+          "title": "Op",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "incoming_damage",
+            "outgoing_damage",
+            "attack_roll",
+            "damage_roll"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Amount"
+        }
+      },
+      "required": [
+        "target",
+        "amount"
+      ],
+      "title": "ActCap",
+      "type": "object"
+    },
+    "ActModify": {
+      "properties": {
+        "op": {
+          "const": "modify",
+          "default": "modify",
+          "title": "Op",
+          "type": "string"
+        },
+        "targetPath": {
+          "title": "Targetpath",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "add",
+            "subtract",
+            "multiply",
+            "divide",
+            "set",
+            "min",
+            "max",
+            "replace",
+            "replaceFormula",
+            "cap",
+            "clamp",
+            "grantTag",
+            "removeTag",
+            "convertType"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Value"
+        },
+        "bonusType": {
+          "anyOf": [
+            {
+              "enum": [
+                "enhancement",
+                "morale",
+                "luck",
+                "insight",
+                "competence",
+                "sacred",
+                "profane",
+                "resistance",
+                "deflection",
+                "dodge",
+                "size",
+                "natural_armor",
+                "natural_armor_enhancement",
+                "circumstance",
+                "alchemical",
+                "unnamed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bonustype"
+        }
+      },
+      "required": [
+        "targetPath",
+        "operator",
+        "value"
+      ],
+      "title": "ActModify",
+      "type": "object"
+    },
+    "ActMultiply": {
+      "properties": {
+        "op": {
+          "const": "multiply",
+          "default": "multiply",
+          "title": "Op",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "incoming_damage",
+            "outgoing_damage",
+            "attack_roll",
+            "damage_roll"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "factor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Factor"
+        }
+      },
+      "required": [
+        "target",
+        "factor"
+      ],
+      "title": "ActMultiply",
+      "type": "object"
+    },
+    "ActRedirect": {
+      "properties": {
+        "op": {
+          "const": "redirect",
+          "default": "redirect",
+          "title": "Op",
+          "type": "string"
+        },
+        "what": {
+          "default": "damage",
+          "enum": [
+            "damage",
+            "effect"
+          ],
+          "title": "What",
+          "type": "string"
+        },
+        "to": {
+          "default": "source",
+          "enum": [
+            "source",
+            "self"
+          ],
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "title": "ActRedirect",
+      "type": "object"
+    },
+    "ActReflect": {
+      "properties": {
+        "op": {
+          "const": "reflect",
+          "default": "reflect",
+          "title": "Op",
+          "type": "string"
+        },
+        "what": {
+          "default": "damage",
+          "enum": [
+            "damage",
+            "effect"
+          ],
+          "title": "What",
+          "type": "string"
+        },
+        "percent": {
+          "default": 100,
+          "title": "Percent",
+          "type": "integer"
+        },
+        "to": {
+          "default": "source",
+          "enum": [
+            "source",
+            "self"
+          ],
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "title": "ActReflect",
+      "type": "object"
+    },
+    "ActReroll": {
+      "properties": {
+        "op": {
+          "const": "reroll",
+          "default": "reroll",
+          "title": "Op",
+          "type": "string"
+        },
+        "what": {
+          "enum": [
+            "attack_roll",
+            "miss_chance",
+            "save",
+            "crit_confirm",
+            "skill_check"
+          ],
+          "title": "What",
+          "type": "string"
+        },
+        "keep": {
+          "default": "best",
+          "enum": [
+            "best",
+            "success"
+          ],
+          "title": "Keep",
+          "type": "string"
+        }
+      },
+      "required": [
+        "what"
+      ],
+      "title": "ActReroll",
+      "type": "object"
+    },
+    "ActSetOutcome": {
+      "properties": {
+        "op": {
+          "const": "setOutcome",
+          "default": "setOutcome",
+          "title": "Op",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "block",
+            "allow",
+            "negate",
+            "hit",
+            "miss",
+            "success",
+            "failure",
+            "suppress",
+            "unsuppress"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "ActSetOutcome",
+      "type": "object"
+    },
     "AreaSpec": {
       "properties": {
         "shape": {
@@ -1340,39 +1712,55 @@
           "items": {
             "discriminator": {
               "mapping": {
-                "attach": "#/$defs/OpAttachEffect",
+                "absorbIntoPool": "#/$defs/ActAbsorbIntoPool",
+                "cap": "#/$defs/ActCap",
                 "condition.apply": "#/$defs/OpConditionApply",
                 "condition.remove": "#/$defs/OpConditionRemove",
-                "damage": "#/$defs/OpDamage",
-                "detach": "#/$defs/OpDetachEffect",
                 "dispel": "#/$defs/OpDispel",
-                "heal_hp": "#/$defs/OpHealHP",
-                "move": "#/$defs/OpMove",
+                "modify": "#/$defs/ActModify",
+                "multiply": "#/$defs/ActMultiply",
+                "redirect": "#/$defs/ActRedirect",
+                "reflect": "#/$defs/ActReflect",
+                "reroll": "#/$defs/ActReroll",
                 "resource.create": "#/$defs/OpResourceCreate",
                 "resource.restore": "#/$defs/OpResourceRestore",
                 "resource.set": "#/$defs/OpResourceSet",
                 "resource.spend": "#/$defs/OpResourceSpend",
                 "save": "#/$defs/OpSave",
                 "schedule": "#/$defs/OpSchedule",
+                "setOutcome": "#/$defs/ActSetOutcome",
                 "suppress": "#/$defs/OpSuppress",
-                "teleport": "#/$defs/OpTeleport",
-                "temp_hp": "#/$defs/OpTempHP",
-                "transform": "#/$defs/OpTransform",
-                "unsuppress": "#/$defs/OpUnsuppress",
-                "zone.create": "#/$defs/OpZoneCreate",
-                "zone.destroy": "#/$defs/OpZoneDestroy"
+                "unsuppress": "#/$defs/OpUnsuppress"
               },
               "propertyName": "op"
             },
             "oneOf": [
               {
-                "$ref": "#/$defs/OpDamage"
+                "$ref": "#/$defs/ActModify"
               },
               {
-                "$ref": "#/$defs/OpHealHP"
+                "$ref": "#/$defs/ActReroll"
               },
               {
-                "$ref": "#/$defs/OpTempHP"
+                "$ref": "#/$defs/ActCap"
+              },
+              {
+                "$ref": "#/$defs/ActMultiply"
+              },
+              {
+                "$ref": "#/$defs/ActReflect"
+              },
+              {
+                "$ref": "#/$defs/ActRedirect"
+              },
+              {
+                "$ref": "#/$defs/ActAbsorbIntoPool"
+              },
+              {
+                "$ref": "#/$defs/ActSetOutcome"
+              },
+              {
+                "$ref": "#/$defs/OpSave"
               },
               {
                 "$ref": "#/$defs/OpConditionApply"
@@ -1393,28 +1781,7 @@
                 "$ref": "#/$defs/OpResourceSet"
               },
               {
-                "$ref": "#/$defs/OpZoneCreate"
-              },
-              {
-                "$ref": "#/$defs/OpZoneDestroy"
-              },
-              {
-                "$ref": "#/$defs/OpSave"
-              },
-              {
-                "$ref": "#/$defs/OpAttachEffect"
-              },
-              {
-                "$ref": "#/$defs/OpDetachEffect"
-              },
-              {
-                "$ref": "#/$defs/OpMove"
-              },
-              {
-                "$ref": "#/$defs/OpTeleport"
-              },
-              {
-                "$ref": "#/$defs/OpTransform"
+                "$ref": "#/$defs/OpSchedule"
               },
               {
                 "$ref": "#/$defs/OpDispel"
@@ -1424,9 +1791,6 @@
               },
               {
                 "$ref": "#/$defs/OpUnsuppress"
-              },
-              {
-                "$ref": "#/$defs/OpSchedule"
               }
             ]
           },
