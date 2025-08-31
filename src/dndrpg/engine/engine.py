@@ -1,3 +1,4 @@
+import random
 from ..util.paths import content_dir
 from .state import GameState, default_state
 from .expr import expr_cache_info
@@ -43,17 +44,21 @@ class GameEngine:
         self.state: GameState = default_state(self.content)
         self.resources = ResourceEngine(self.content, self.state)
         self.conditions = ConditionsEngine(self.content, self.state)
-        self.effects = EffectsEngine(self.content, self.state, self.resources, self.conditions)
         self.damage = DamageEngine(self.content, self.state)
-        # Create hooks first? We need hooks for zones to register; create hooks then zones:
-        self.hooks = RuleHooksRegistry(self.content, self.state, self.effects, self.conditions, self.resources)
-        self.zones = ZoneEngine(self.content, self.state, self.hooks)
-        # Rebind engines to shared registry + zone/damage
-        self.conditions.hooks = self.hooks
-        self.effects.hooks = self.hooks
-        self.effects.damage = self.damage
-        self.effects.zones = self.zones
         self.modifiers = ModifiersEngine(self.content, self.state)
+        self.hooks = RuleHooksRegistry(self.content, self.state, None, self.conditions, self.resources)  # temporary None; rebind below
+        self.zones = ZoneEngine(self.content, self.state, self.hooks)
+        self.rng = random.Random(1337)  # or seed from save
+        self.effects = EffectsEngine(self.content, self.state,
+                                     resources=self.resources,
+                                     conditions=self.conditions,
+                                     hooks=self.hooks,
+                                     damage=self.damage,
+                                     zones=self.zones,
+                                     modifiers=self.modifiers,
+                                     rng=self.rng)
+        # rebind effects in hooks
+        self.hooks.effects = self.effects
         self.slot_id: str | None = None
 
     # — New Game flow helpers —

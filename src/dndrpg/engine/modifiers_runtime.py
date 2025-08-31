@@ -1,11 +1,12 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from .schema_models import Modifier
 from .loader import ContentIndex
 from .models import Entity
 from .expr import eval_expr
-from .state import GameState
+if TYPE_CHECKING:
+    from .state import GameState
 
 # Typed bonus stacking policy
 TYPED_NO_STACK_HIGHEST = {

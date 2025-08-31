@@ -198,10 +198,10 @@ M2 — Effects/State engine (definitions → instances)
 Acceptance: Can attach a self-buff with typed modifiers and a timed duration; modifiers apply and expire correctly; untyped same-source does not stack.
 
 M3 — Gates and damage pipeline
-- [ ] Gates per target:
-  - [ ] SR gate (one CL check per target per use; SR:Yes only)
-  - [ ] Save gate (Fort/Ref/Will, DC expressions, branch policies: negates/half/partial/none)
-  - [ ] Attack gate (melee/ranged/touch/ray; crit confirm; concealment/miss chance)
+- [x] Gates per target:
+  - [x] SR gate (one CL check per target per use; SR:Yes only)
+  - [x] Save gate (Fort/Ref/Will, DC expressions, branch policies: negates/half/partial/none)
+  - [x] Attack gate (melee/ranged/touch/ray; crit confirm; concealment/miss chance)
 - [ ] Damage pipeline:
   - [ ] 1) Immunity → 2) Type conversion → 3) Resist/DR/ablative pools → 4) Vulnerability → 5) Apply to HP/THP → 6) Injury rider negation (if DR reduced to 0) → 7) Post hooks
   - [ ] DR policy: apply to total physical damage per attack (documented)

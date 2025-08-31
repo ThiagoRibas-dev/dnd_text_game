@@ -257,4 +257,8 @@ class DnDApp(App):
         self.refresh_all()
 
 def run_app():
-    DnDApp().run()
+    try:
+        app = DnDApp()
+        app.run()
+    except Exception as e:
+        print(f"Error running app: {e}")

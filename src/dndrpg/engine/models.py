@@ -139,6 +139,7 @@ class Entity(BaseModel):
     classes: Dict[str, int] = Field(default_factory=dict)         # e.g., {"cleric": 1}
     caster_levels: Dict[str, int] = Field(default_factory=dict)    # e.g., {"cleric": 1}
     hd: Optional[int] = None  # total HD; if None, expressions use level
+    spell_resistance: int = 0  # SR value if any; 0 means no SR
 
     def get_equipped(self, slot: str) -> Optional[Item]:
         iid = self.equipment.get(slot)
