@@ -1,0 +1,16 @@
+schema_version: 1
+id: spell.demo_autoshaken
+name: Demo Auto Shaken
+source: spell
+abilityType: Spell
+activation: { action: standard }
+range: { type: personal }
+duration: { type: rounds, value: 3 }
+gates: { sr: { applies: false } }
+ruleHooks:
+  - scope: scheduler
+    match: { event: "startOfTurn" }
+    action:
+      - op: condition.apply
+        id: cond.shaken
+        duration: { type: rounds, value: 1 }

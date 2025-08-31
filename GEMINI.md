@@ -174,7 +174,7 @@ M2 — Effects/State engine (definitions → instances)
   - [x] Typed bonuses (enhancement, morale, luck, insight, competence, sacred, profane, resistance, deflection, dodge, size, natural armor)
   - [x] Unnamed bonuses + same-sourceKey non-stacking
   - [x] Operator ordering: set/replace → add/sub (stacking) → mul/div → min/max → cap/clamp
-- [ ] Rule hooks registry (incoming.effect, on.attack pre/post, on.save pre/post, scheduler ticks, incoming.damage)
+- [x] Rule hooks registry (incoming.effect, on.attack pre/post, on.save pre/post, scheduler ticks, incoming.damage)
 - [ ] Operations: damage/heal (HP/nonlethal/ability dmg/drain), apply/remove condition, (create/spend/restore) resource, attach/detach effects, create zone
 - [ ] Antimagic/suppression flags per abilityType (Ex/Su/Sp/Spell)
 - [ ] Expression compilation cache

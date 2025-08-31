@@ -8,6 +8,7 @@ from .effects_runtime import EffectsEngine
 from .resources_runtime import ResourceEngine
 from .conditions_runtime import ConditionsEngine
 from .modifiers_runtime import ModifiersEngine
+from .rulehooks_runtime import RuleHooksRegistry
 
 ENGINE_VERSION = "0.1.0"
 
@@ -41,6 +42,11 @@ class GameEngine:
         self.conditions = ConditionsEngine(self.content, self.state)
         self.effects = EffectsEngine(self.content, self.state, self.resources, self.conditions)
         self.modifiers = ModifiersEngine(self.content, self.state)
+        # Now create the hooks and rebind engines to it
+        self.hooks = RuleHooksRegistry(self.content, self.state, self.effects, self.conditions, self.resources)
+        # Rebind engines to refer to the shared registry (circular-safe since we already created them)
+        self.conditions.hooks = self.hooks
+        self.effects.hooks = self.hooks
         self.slot_id: str | None = None
 
     # — New Game flow helpers —
@@ -124,8 +130,13 @@ class GameEngine:
                         dr += f" {inst.remaining_rounds} rounds"
                     out.append(f"- {inst.name} [{dr}]")
         elif c == "next":
+            # startOfTurn for player
+            out += self.hooks.scheduler_event(self.state.player.id, "startOfTurn")
+            # tick conditions/resources per-round
             out += self.conditions.tick_round()
-            # (Optional) also tick per-round resource refresh or effect durations later
+            self.resources.refresh_cadence("per_round")
+            # endOfTurn
+            out += self.hooks.scheduler_event(self.state.player.id, "endOfTurn")
         elif c.startswith("status"):
             p = self.state.player
             out.append(f"{p.name} | HP {p.hp_current}/{p.hp_max} AC {p.ac_total} (T{p.ac_touch}/FF{p.ac_ff}) | Melee +{p.attack_melee_bonus}")

@@ -1,15 +1,15 @@
 from __future__ import annotations
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List, Tuple, TYPE_CHECKING
 from uuid import uuid4
 from pydantic import BaseModel, Field
 from dndrpg.engine.schema_models import ConditionDefinition, DurationSpec
 from dndrpg.engine.expr import eval_for_actor
 from dndrpg.engine.models import Entity
 from dndrpg.engine.loader import ContentIndex
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from dndrpg.engine.state import GameState
+    from dndrpg.engine.rulehooks_runtime import RuleHooksRegistry
 
 class ConditionInstance(BaseModel):
     instance_id: str = Field(default_factory=lambda: uuid4().hex)
@@ -40,9 +40,10 @@ class ConditionsEngine:
         If an Op explicitly requests stacks=True, allow multiple instances.
     """
 
-    def __init__(self, content: ContentIndex, state: "GameState"):
+    def __init__(self, content: ContentIndex, state: "GameState", hooks: "RuleHooksRegistry" | None = None):
         self.content = content
         self.state = state
+        self.hooks = hooks  # may be set later
 
     def _snapshot_duration_rounds(
         self,
@@ -122,6 +123,8 @@ class ConditionsEngine:
 
         # Else add a new instance
         lst.append(new_inst)
+        if self.hooks:
+            self.hooks.register_for_condition(cd, new_inst.instance_id, target.id)
         desc = dur_type + (f" {rem_rounds} rounds" if rem_rounds is not None else "")
         logs.append(f"[Cond] {cd.name} applied to {target.name} ({desc})")
         return logs
@@ -135,21 +138,24 @@ class ConditionsEngine:
             for i, inst in enumerate(lst):
                 if inst.instance_id == instance_id:
                     lst.pop(i)
+                    if self.hooks:
+                        self.hooks.unregister_by_parent(instance_id)
                     logs.append(f"[Cond] Removed {inst.name} from {target.name}")
                     return logs
             return ["[Cond] remove: instance not found"]
         if cond_id:
             kept = []
-            removed_any = False
+            removed_ids = []
             for inst in lst:
                 if inst.definition_id == cond_id:
-                    removed_any = True
+                    removed_ids.append(inst.instance_id)
                     logs.append(f"[Cond] Removed {inst.name} from {target.name}")
                 else:
                     kept.append(inst)
             self.state.active_conditions[target.id] = kept
-            if not removed_any:
-                logs.append(f"[Cond] {cond_id} not present on {target.name}")
+            if self.hooks:
+                for iid in removed_ids:
+                    self.hooks.unregister_by_parent(iid)
             return logs
         return ["[Cond] remove: specify cond_id or instance_id"]
 
@@ -164,6 +170,8 @@ class ConditionsEngine:
                         inst.remaining_rounds -= 1
                     if inst.remaining_rounds <= 0:
                         logs.append(f"[Cond] {inst.name} expired")
+                        if self.hooks:
+                            self.hooks.unregister_by_parent(inst.instance_id)
                         continue
                 keep.append(inst)
             self.state.active_conditions[entity_id] = keep
