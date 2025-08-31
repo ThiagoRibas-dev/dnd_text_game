@@ -76,8 +76,15 @@ class LoadScreen(Screen):
         lines = self.app.engine.load_slot(slot)
         for ln in lines:
             self.app.log_panel.push(ln)
-        self.app.pop_screen()
-        self.app.refresh_all("Save loaded.")
+        # Check if the load was successful before popping screens
+        if not any("Error:" in line for line in lines):
+            # Pop LoadScreen and TitleScreen to reveal the main game UI
+            self.app.pop_screen() # Pop LoadScreen
+            self.app.pop_screen() # Pop TitleScreen
+            self.app.refresh_all("Save loaded.")
+        else:
+            # If there was an error, stay on the LoadScreen and show the error
+            pass
     @on(Button.Pressed, "#del")
     def _del(self) -> None:
         slot = self.query_one("#slot", Input).value.strip()
@@ -148,6 +155,8 @@ class DnDApp(App):
         for line in out_lines:
             self.log_panel.push(line)
         self.refresh_all()
+        if self.engine.should_quit:
+            self.exit()
 
 def run_app():
     try:

@@ -72,14 +72,19 @@ class GameEngine:
         return [f"Loaded latest save: {meta.slot_id} ({meta.description})"]
 
     def load_slot(self, slot_id: str) -> list[str]:
-        self.state = load_game(slot_id, GameState)
-        md = [m for m in list_saves() if m.slot_id == slot_id][0]
-        self.campaign = self.content.campaigns.get(md.campaign_id)
-        self.slot_id = slot_id
-        # Re-seed RNG from loaded state
-        if md.rng_seed is not None:
-            self.rng.seed(md.rng_seed)
-        return [f"Loaded save: {slot_id}"]
+        try:
+            self.state = load_game(slot_id, GameState)
+            md = next((m for m in list_saves() if m.slot_id == slot_id), None)
+            if not md:
+                return [f"Error: Save slot '{slot_id}' not found in metadata."]
+            self.campaign = self.content.campaigns.get(md.campaign_id)
+            self.slot_id = slot_id
+            # Re-seed RNG from loaded state
+            if md.rng_seed is not None:
+                self.rng.seed(md.rng_seed)
+            return [f"Loaded save: {slot_id}"]
+        except Exception as e:
+            return [f"Error loading save slot '{slot_id}': {e}"]
 
     def save_current(self) -> list[str]:
         if not self.slot_id or not self.campaign:
