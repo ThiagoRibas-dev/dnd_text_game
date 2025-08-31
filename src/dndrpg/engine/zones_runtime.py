@@ -33,6 +33,46 @@ class ZoneEngine:
         self.state = state
         self.hooks = hooks
 
+    def is_entity_under_antimagic(self, owner_entity_id: str) -> bool:
+        for zi in self.state.active_zones.get(owner_entity_id, []):
+            # If zone was created from a definition, read suppression there
+            if zi.definition_id:
+                zd = self.content.zones.get(zi.definition_id)
+                if zd and zd.suppression and zd.suppression.kind == "antimagic":
+                    if zi.active:
+                        return True
+            # Inline zones could encode antimagic via hooks; for now, only typed suppression is checked
+        return False
+
+    def update_suppression_for_entity(self, owner_entity_id: str) -> list[str]:
+        logs: list[str] = []
+        under_am = self.is_entity_under_antimagic(owner_entity_id)
+        if not self.state.active_effects.get(owner_entity_id):
+            return logs
+        for inst in self.state.active_effects[owner_entity_id]:
+            # Ex unaffected; Su/Sp/Spell suppressed in antimagic
+            if inst.abilityType in ("Su", "Sp", "Spell"):
+                if under_am and not inst.suppressed:
+                    inst.suppressed = True
+                    logs.append(f"[AMF] Suppressed {inst.name}")
+                elif not under_am and inst.suppressed:
+                    inst.suppressed = False
+                    logs.append(f"[AMF] Unsuppressed {inst.name}")
+            else:
+                # Ex always unaffected
+                if inst.suppressed:
+                    inst.suppressed = False
+        return logs
+
+    def update_suppression_all(self) -> list[str]:
+        out: list[str] = []
+        # Only owner-scoped zones exist in this MVP; iterate all owners
+        for owner_id in self.state.active_zones.keys():
+            out += self.update_suppression_for_entity(owner_id)
+        # Also update entities that might not have zones but may have suppression removed
+        out += self.update_suppression_for_entity(self.state.player.id)
+        return out
+
     def _snapshot_duration(self, zd: ZoneDefinition) -> Tuple[str, Optional[int]]:
         ds = zd.duration
         if ds is None:
@@ -64,6 +104,7 @@ class ZoneEngine:
             self.hooks._register(h, source_kind="zone", source_id=zd.id, source_name=zd.name,
                                  parent_instance_id=zi.instance_id, target_entity_id=owner_entity_id)
         logs.append(f"[Zone] Created {zd.name} ({dur_type}{f' {rem} rounds' if rem is not None else ''}) on {owner_entity_id}")
+        logs += self.update_suppression_for_entity(owner_entity_id)
         return (zi, logs)
 
     def create_inline(self, name: str, shape: AreaSpec, duration: DurationSpec, hooks: List[RuleHook], owner_entity_id: str) -> Tuple[ZoneInstance, List[str]]:
@@ -95,6 +136,7 @@ class ZoneEngine:
             else:
                 keep.append(zi)
         self.state.active_zones[owner_entity_id] = keep
+        logs += self.update_suppression_for_entity(owner_entity_id)
         return logs
 
     def tick_round(self) -> List[str]:
@@ -111,4 +153,5 @@ class ZoneEngine:
                         continue
                 keep.append(zi)
             self.state.active_zones[owner_id] = keep
+        logs += self.update_suppression_all()
         return logs

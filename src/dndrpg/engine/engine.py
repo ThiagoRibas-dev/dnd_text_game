@@ -159,7 +159,8 @@ class GameEngine:
                     dr = f"{inst.duration_type}"
                     if inst.remaining_rounds is not None:
                         dr += f" {inst.remaining_rounds} rounds"
-                    out.append(f"- {inst.name} [{dr}] (id={inst.instance_id})")
+                    sup = " [suppressed]" if inst.suppressed else ""
+                    out.append(f"- {inst.name}{sup} [{dr}] (id={inst.instance_id})")
         elif c.startswith("cast "):
             _, _, eff_id = cmd.partition(" ")
             eff_id = eff_id.strip()

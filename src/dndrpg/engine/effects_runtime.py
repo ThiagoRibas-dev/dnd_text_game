@@ -196,7 +196,13 @@ class EffectsEngine:
             return [f"[Effects] Unknown effect id: {effect_id}"]
         ed = self.content.effects[effect_id]
 
-        # 0) incoming.effect hook decision
+        # Zone-based antimagic guard: block Su/Sp/Spell when target under antimagic
+        if self.zones and ed.abilityType in ("Su", "Sp", "Spell"):
+            if self.zones.is_entity_under_antimagic(target.id):
+                logs.append(f"[Effects] {ed.name} suppressed by antimagic; no effect")
+                return logs
+
+        # incoming.effect hook decision (globe etc. can still block)
         if self.hooks:
             dec = self.hooks.incoming_effect(target.id, effect_def=ed, actor_entity_id=source.id)
             if not dec.allow:
@@ -215,25 +221,11 @@ class EffectsEngine:
             started_at_round=self.state.round_counter
         )
 
-        # Check for initial suppression from active zones
+        # Initial suppression toggle (covers cases where AMF appeared just before attach)
         if self.zones:
-            for zone_owner_id, zones_list in self.state.active_zones.items():
-                for zone_inst in zones_list:
-                    zd = self.content.zones.get(zone_inst.definition_id)
-                    if zd and zd.suppression and zd.suppression.kind == "antimagic":
-                        if ed.abilityType in (zd.suppression.ability_types or []): # Assuming ability_types is a new field in ZoneSuppression
-                            inst.suppressed = True
-                            inst.suppressed_by.append(f"zone:{zone_inst.instance_id}")
-                            logs.append(f"[Effects] {inst.name} initially suppressed by antimagic zone {zone_inst.name}")
+            logs += self.zones.update_suppression_for_entity(target.id)
 
-        # Execute operations on attach
-        self._exec_operations_on_attach(ed, inst, source, target, logs)
-
-        if dur_type == "instantaneous":
-            logs.append(f"[Effects] {ed.name} (instantaneous) applied to {target.name}")
-            return logs
-
-        # Retain instance and register hooks
+        # Retain and register hooks
         self.state.active_effects.setdefault(target.id, []).append(inst)
         if self.hooks:
             self.hooks.register_for_effect(ed, inst.instance_id, target.id)

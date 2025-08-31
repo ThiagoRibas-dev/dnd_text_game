@@ -48,6 +48,8 @@ class ModifiersEngine:
         out: Dict[str, List[EvaluatedMod]] = {}
         # Effects
         for inst in self.state.active_effects.get(entity_id, []):
+            if getattr(inst, "suppressed", False):
+                continue
             ed = self.content.effects.get(inst.definition_id)
             if not ed: 
                 continue

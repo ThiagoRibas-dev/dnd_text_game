@@ -167,6 +167,8 @@ class RuleHooksRegistry:
         }
         logs: List[str] = []
         for rh in hooks:
+            if self._is_parent_suppressed(rh):
+                continue
             if not self._match(rh, ctx):
                 continue
             for act in rh.actions:
@@ -203,6 +205,8 @@ class RuleHooksRegistry:
         target = self._entity_by_id(target_entity_id)
         ctx = {"event": event}
         for rh in hooks:
+            if self._is_parent_suppressed(rh):
+                continue
             if not self._match(rh, ctx):
                 continue
             for act in rh.actions:
@@ -223,6 +227,8 @@ class RuleHooksRegistry:
             return result
         ctx = {"event": f"on.attack.{phase}"}
         for rh in hooks:
+            if self._is_parent_suppressed(rh):
+                continue
             if not self._match(rh, ctx):
                 continue
             for act in rh.actions:
@@ -237,6 +243,8 @@ class RuleHooksRegistry:
             return result
         ctx = {"event": f"on.save.{phase}"}
         for rh in hooks:
+            if self._is_parent_suppressed(rh):
+                continue
             if not self._match(rh, ctx):
                 continue
             for act in rh.actions:
@@ -255,6 +263,8 @@ class RuleHooksRegistry:
             return result
         ctx = {"event": "incoming.damage"}
         for rh in hooks:
+            if self._is_parent_suppressed(rh):
+                continue
             if not self._match(rh, ctx):
                 continue
             for act in rh.actions:
