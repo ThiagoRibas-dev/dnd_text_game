@@ -7,6 +7,7 @@ from .save import save_game, load_game, list_saves, latest_save
 from .effects_runtime import EffectsEngine
 from .resources_runtime import ResourceEngine
 from .conditions_runtime import ConditionsEngine
+from .modifiers_runtime import ModifiersEngine
 
 ENGINE_VERSION = "0.1.0"
 
@@ -39,6 +40,7 @@ class GameEngine:
         self.resources = ResourceEngine(self.content, self.state)
         self.conditions = ConditionsEngine(self.content, self.state)
         self.effects = EffectsEngine(self.content, self.state, self.resources, self.conditions)
+        self.modifiers = ModifiersEngine(self.content, self.state)
         self.slot_id: str | None = None
 
     # — New Game flow helpers —

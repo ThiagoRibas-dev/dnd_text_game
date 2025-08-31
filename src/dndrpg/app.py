@@ -236,6 +236,7 @@ class DnDApp(App):
     def on_mount(self) -> None:
         # Start at title screen
         self.push_screen(TitleScreen())
+        self.stats_panel.bind_engine(self.engine)
         self.refresh_all("Welcome! Use the title screen to start or load a game.")
 
     def refresh_all(self, msg: str | None = None):

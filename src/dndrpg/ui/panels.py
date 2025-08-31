@@ -3,22 +3,28 @@ from textual.reactive import reactive
 from rich.table import Table
 from ..engine.state import GameState
 from ..engine.models import Item
+from ..engine.engine import GameEngine
 
 class StatsPanel(Static):
-    state: GameState | None = None
+    engine: GameEngine | None = None
+
+    def bind_engine(self, engine: GameEngine):
+        self.engine = engine
+
     def update_state(self, state: GameState):
-        self.state = state
-        if not state:
+        if not state or not self.engine:
             self.update("No state")
             return
         p = state.player
-        table = Table(title="Stats", pad_edge=False, show_header=False)
+        resolved = self.engine.modifiers.resolved_stats(p)
+
+        table = Table(title="Stats (resolved)", pad_edge=False, show_header=False)
         table.add_row("HP", f"{p.hp_current}/{p.hp_max}")
-        table.add_row("AC", f"{p.ac_total} (T {p.ac_touch} / FF {p.ac_ff})")
-        table.add_row("Initiative", f"+{p.initiative_bonus}")
-        table.add_row("Melee", f"+{p.attack_melee_bonus}")
-        table.add_row("Ranged", f"+{p.attack_ranged_bonus}")
-        table.add_row("Saves", f"F+{p.save_fort} R+{p.save_ref} W+{p.save_will}")
+        table.add_row("AC", f"{resolved['ac_total']} (T {resolved['ac_touch']} / FF {resolved['ac_ff']})")
+        table.add_row("Initiative", f"+{p.initiative_bonus}")  # init modifiers can be added later
+        table.add_row("Melee", f"+{resolved['attack_melee_bonus']}")
+        table.add_row("Ranged", f"+{resolved['attack_ranged_bonus']}")
+        table.add_row("Saves", f"F+{resolved['save_fort']} R+{resolved['save_ref']} W+{resolved['save_will']}")
         self.update(table)
 
 class InventoryPanel(Static):

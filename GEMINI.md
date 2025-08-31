@@ -170,10 +170,10 @@ M2 — Effects/State engine (definitions → instances)
 - [x] EffectDefinition/EffectInstance implemented (blueprint vs runtime)
 - [x] ResourceDefinition/ResourceState implemented (capacity formulas, refresh cadence)
 - [x] ConditionDefinition/ConditionInstance implemented
-- [ ] Modifiers engine with stacking rules:
-  - [ ] Typed bonuses (enhancement, morale, luck, insight, competence, sacred, profane, resistance, deflection, dodge, size, natural armor)
-  - [ ] Unnamed bonuses + same-sourceKey non-stacking
-  - [ ] Operator ordering: set/replace → add/sub (stacking) → mul/div → min/max → cap/clamp
+- [x] Modifiers engine with stacking rules:
+  - [x] Typed bonuses (enhancement, morale, luck, insight, competence, sacred, profane, resistance, deflection, dodge, size, natural armor)
+  - [x] Unnamed bonuses + same-sourceKey non-stacking
+  - [x] Operator ordering: set/replace → add/sub (stacking) → mul/div → min/max → cap/clamp
 - [ ] Rule hooks registry (incoming.effect, on.attack pre/post, on.save pre/post, scheduler ticks, incoming.damage)
 - [ ] Operations: damage/heal (HP/nonlethal/ability dmg/drain), apply/remove condition, (create/spend/restore) resource, attach/detach effects, create zone
 - [ ] Antimagic/suppression flags per abilityType (Ex/Su/Sp/Spell)
