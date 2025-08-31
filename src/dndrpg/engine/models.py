@@ -152,6 +152,12 @@ class Entity(BaseModel):
     classes: Dict[str, int] = Field(default_factory=dict)         # e.g., {"cleric": 1}
     caster_levels: Dict[str, int] = Field(default_factory=dict)    # e.g., {"cleric": 1}
     hd: Optional[int] = None  # total HD; if None, expressions use level
+    skills: Dict[str, int] = Field(default_factory=dict)   # skill->ranks
+    feats: Set[str] = Field(default_factory=set)
+    languages: List[str] = Field(default_factory=list)
+    domains: List[str] = Field(default_factory=list)
+    spells_known: List[str] = Field(default_factory=list)
+    spells_prepared: Dict[int, List[str]] = Field(default_factory=dict)  # level -> ids
     # Spell Resistance for SR gate
     spell_resistance: int = 0
     # Defenses

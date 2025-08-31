@@ -4,7 +4,7 @@ from .state import GameState, default_state
 from .expr import expr_cache_info
 from .loader import load_content, ContentIndex
 from .campaigns import CampaignDefinition
-from .models import Entity, Abilities, AbilityScore, Size
+from .models import Entity
 from .save import save_game, load_game, list_saves, latest_save
 from .effects_runtime import EffectsEngine
 from .resources_runtime import ResourceEngine
@@ -14,28 +14,9 @@ from .rulehooks_runtime import RuleHooksRegistry
 from .damage_runtime import DamageEngine
 from .zones_runtime import ZoneEngine
 from .schema_models import EffectDefinition, Operation, Gates, AttackGate
+from .settings import load_settings, Settings # Import settings
 
 ENGINE_VERSION = "0.1.0"
-
-CLASS_TABLE = {
-    "fighter": {"hd": 10, "bab": "full", "fort": "good", "ref": "poor", "will": "poor"},
-    "cleric": {"hd": 8, "bab": "three_quarter", "fort": "good", "ref": "poor", "will": "good"},
-    "sorcerer": {"hd": 4, "bab": "half", "fort": "poor", "ref": "poor", "will": "good"},
-    "monk": {"hd": 8, "bab": "three_quarter", "fort": "good", "ref": "good", "will": "good"},
-}
-
-def bab_from_prog(prog: str, level: int) -> int:
-    if prog == "full":
-        return level
-    if prog == "three_quarter":
-        return int(level * 3 / 4)
-    if prog == "half":
-        return level // 2
-    return 0
-
-def base_save(is_good: str, level: int) -> int:
-    # Good: 2 at 1st; Poor: 0 at 1st (simplified)
-    return 2 if is_good == "good" else 0
 
 class GameEngine:
     def __init__(self):
@@ -49,7 +30,8 @@ class GameEngine:
         self.modifiers = ModifiersEngine(self.content, self.state)
         self.hooks = RuleHooksRegistry(self.content, self.state, None, self.conditions, self.resources)  # temporary None; rebind below
         self.zones = ZoneEngine(self.content, self.state, self.hooks)
-        self.rng = random.Random(1337)  # or seed from save
+        self.settings: Settings = load_settings() # Load settings
+        self.rng = random.Random(self._get_rng_seed()) # Use seed from settings
         self.effects = EffectsEngine(self.content, self.state,
                                      resources=self.resources,
                                      conditions=self.conditions,
@@ -63,41 +45,12 @@ class GameEngine:
         self.slot_id: str | None = None
         self.should_quit: bool = False
 
-    # — New Game flow helpers —
-    def build_entity_lvl1(self, name: str, race: str, cls: str, abilities: dict[str, int], kit_ids: list[str]) -> Entity:
-        # Build abilities
-        ab = Abilities(
-            str_=AbilityScore(base=abilities["str"]),
-            dex=AbilityScore(base=abilities["dex"]),
-            con=AbilityScore(base=abilities["con"]),
-            int_=AbilityScore(base=abilities["int"]),
-            wis=AbilityScore(base=abilities["wis"]),
-            cha=AbilityScore(base=abilities["cha"]),
-        )
-        # Class bases
-        ct = CLASS_TABLE[cls]
-        bab = bab_from_prog(ct["bab"], 1)
-        fort = base_save(ct["fort"], 1)
-        ref = base_save(ct["ref"], 1)
-        will = base_save(ct["will"], 1)
-        hd = ct["hd"]
-        hp_max = hd + ab.con.mod()  # hp first level max (houserule default)
-        ent = Entity(
-            id="pc.hero", name=f"{name} ({race.title()} {cls.title()} 1)", level=1, size=Size.MEDIUM,
-            abilities=ab, base_attack_bonus=bab, base_fort=fort, base_ref=ref, base_will=will,
-            hp_max=max(1, hp_max), hp_current=max(1, hp_max),
-            classes={cls: 1},
-            caster_levels=({cls: 1} if cls in {"cleric","druid","wizard","sorcerer","bard"} else {}),
-            hd=1
-        )
-        # Apply kits
-        for kit_id in kit_ids:
-            kit = self.content.kits[kit_id]
-            for iid in kit.items:
-                ent.inventory.append(self.content.clone_item(iid))
-            for slot, iid in kit.auto_equip.items():
-                ent.equipment[slot] = iid
-        return ent
+    def _get_rng_seed(self) -> int:
+        if self.settings.rng_seed_mode == "random":
+            return random.randint(0, 2**32 - 1)
+        elif self.settings.rng_seed_mode == "session":
+            return int(self.state.clock_seconds) # Use current time as seed for session
+        return 1337 # Fixed seed for "fixed" mode
 
     def start_new_game(self, camp_id: str, entity: Entity, slot_id: str = "slot1") -> list[str]:
         self.campaign = self.content.campaigns[camp_id]
@@ -113,6 +66,9 @@ class GameEngine:
         self.slot_id = meta.slot_id
         self.state = load_game(meta.slot_id, GameState)
         self.campaign = self.content.campaigns.get(meta.campaign_id)
+        # Re-seed RNG from loaded state
+        if meta.rng_seed is not None:
+            self.rng.seed(meta.rng_seed)
         return [f"Loaded latest save: {meta.slot_id} ({meta.description})"]
 
     def load_slot(self, slot_id: str) -> list[str]:
@@ -120,6 +76,9 @@ class GameEngine:
         md = [m for m in list_saves() if m.slot_id == slot_id][0]
         self.campaign = self.content.campaigns.get(md.campaign_id)
         self.slot_id = slot_id
+        # Re-seed RNG from loaded state
+        if md.rng_seed is not None:
+            self.rng.seed(md.rng_seed)
         return [f"Loaded save: {slot_id}"]
 
     def save_current(self) -> list[str]:

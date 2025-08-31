@@ -15,6 +15,9 @@ class SaveMeta:
     engine_version: str
     last_played_ts: float
     description: str
+    rng_seed: Optional[int] = None
+    mode: Optional[str] = None
+    clock_seconds: Optional[float] = None
 
 def _slot_dir(slot_id: str) -> Path:
     return SAVE_ROOT / slot_id
@@ -37,7 +40,10 @@ def list_saves() -> List[SaveMeta]:
             campaign_id=data.get("campaign_id","unknown"),
             engine_version=data.get("engine_version","0.0"),
             last_played_ts=data.get("last_played_ts",0.0),
-            description=data.get("description","")
+            description=data.get("description",""),
+            rng_seed=data.get("rng_seed"),
+            mode=data.get("mode"),
+            clock_seconds=data.get("clock_seconds")
         ))
     metas.sort(key=lambda m: m.last_played_ts, reverse=True)
     return metas
@@ -55,7 +61,10 @@ def save_game(slot_id: str, campaign_id: str, engine_version: str, state: BaseMo
         "campaign_id": campaign_id,
         "engine_version": engine_version,
         "last_played_ts": time.time(),
-        "description": description
+        "description": description,
+        "rng_seed": state.rng_seed if hasattr(state, 'rng_seed') else None,
+        "mode": state.mode if hasattr(state, 'mode') else None,
+        "clock_seconds": state.clock_seconds if hasattr(state, 'clock_seconds') else None,
     }
     (sd / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
