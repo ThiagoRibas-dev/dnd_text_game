@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Literal, List, Dict, Set
+from typing import Optional, Literal, List, Dict, Set, Union
 from enum import Enum
 from pydantic import BaseModel, Field, computed_field
 from typing_extensions import Annotated
@@ -105,6 +105,8 @@ class Shield(Item):
     def effective_shield_bonus(self) -> int:
         return self.shield_bonus + self.enhancement_bonus
 
+ItemType = Annotated[Union[Weapon, Armor, Shield, Item], Field(discriminator='type')]
+
 class AbilityScore(BaseModel):
     base: int = 10
     temp: int = 0
@@ -147,7 +149,7 @@ class Entity(BaseModel):
     ac_misc: int = 0
     init_misc: int = 0
     speed_land: int = 30
-    inventory: List[Item] = Field(default_factory=list)
+    inventory: List[ItemType] = Field(default_factory=list)
     equipment: Dict[str, str] = Field(default_factory=dict)  # "armor","shield","main_hand","off_hand","ranged"
     classes: Dict[str, int] = Field(default_factory=dict)         # e.g., {"cleric": 1}
     caster_levels: Dict[str, int] = Field(default_factory=dict)    # e.g., {"cleric": 1}
