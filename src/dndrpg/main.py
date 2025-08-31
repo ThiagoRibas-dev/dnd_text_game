@@ -1,4 +1,3 @@
-import sys
 from dndrpg.app import DnDApp
 
 def main():

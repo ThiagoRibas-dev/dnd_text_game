@@ -36,6 +36,19 @@ class Handedness(str, Enum):
     TWO_HANDED="two-handed"
 DamageType = Literal["bludgeoning","piercing","slashing"]
 
+DamageKind = Literal[
+    "physical.bludgeoning","physical.piercing","physical.slashing",
+    "fire","cold","acid","electricity","sonic","force",
+    "negative","positive","nonlethal","bleed","typeless"
+]
+
+class DREntry(BaseModel):
+    value: int = 0
+    bypass_magic: bool = False
+    bypass_materials: Set[Literal["adamantine","silver","cold-iron"]] = Field(default_factory=set)
+    bypass_alignments: Set[Literal["good","evil","law","chaos"]] = Field(default_factory=set)
+    bypass_weapon_types: Set[Literal["slashing","piercing","bludgeoning"]] = Field(default_factory=set)
+
 class Item(BaseModel):
     id: IDStr
     name: str
@@ -139,7 +152,13 @@ class Entity(BaseModel):
     classes: Dict[str, int] = Field(default_factory=dict)         # e.g., {"cleric": 1}
     caster_levels: Dict[str, int] = Field(default_factory=dict)    # e.g., {"cleric": 1}
     hd: Optional[int] = None  # total HD; if None, expressions use level
-    spell_resistance: int = 0  # SR value if any; 0 means no SR
+    # Spell Resistance for SR gate
+    spell_resistance: int = 0
+    # Defenses
+    immunities: Set[DamageKind] = Field(default_factory=set)
+    energy_resist: Dict[DamageKind, int] = Field(default_factory=dict)      # e.g., {"fire": 10}
+    vulnerabilities: Dict[DamageKind, float] = Field(default_factory=dict)  # e.g., {"fire": 1.5}
+    dr: List[DREntry] = Field(default_factory=list)
 
     def get_equipped(self, slot: str) -> Optional[Item]:
         iid = self.equipment.get(slot)

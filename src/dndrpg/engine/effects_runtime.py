@@ -9,7 +9,7 @@ from .models import Entity
 from .loader import ContentIndex
 from dndrpg.engine.resources_runtime import ResourceEngine
 from dndrpg.engine.conditions_runtime import ConditionsEngine
-from .damage_runtime import DamageEngine
+from .damage_runtime import DamageEngine, DamagePacket, AttackContext
 from .zones_runtime import ZoneEngine
 from .gates_runtime import GatesEngine, GateOutcome
 from .modifiers_runtime import ModifiersEngine
@@ -69,20 +69,42 @@ class EffectsEngine:
                            damage_scale: float = 1.0, crit_mult: int = 1):
         out = logs if logs is not None else []
         actor = actor or target
+        buffered_packets: List[DamagePacket] = []
+        def flush_packets():
+            nonlocal buffered_packets
+            if not buffered_packets or not self.damage or not target:
+                buffered_packets = []
+                return
+            # Pre-phase hooks handled inside damage engine; we just call once per batch (treat as one attack)
+            result = self.damage.apply_packets(target.id, buffered_packets, ctx=AttackContext(source_entity_id=actor.id if actor else None))
+            out.extend(result.logs)
+            buffered_packets = []
+
         for op in ops:
             opname = getattr(op, "op", None)
             if opname == "damage":
-                if not self.damage or not target:
-                    out.append("[Ops] damage: missing engine or target")
-                    continue
                 amt = getattr(op, "amount", 0)
-                dtype = getattr(op, "damage_type", "typeless")
                 base = amt if isinstance(amt, (int, float)) else eval_for_actor(str(amt), actor) if actor else 0
                 final = int(round(float(base) * max(0.0, damage_scale) * max(1, crit_mult)))
-                self.damage.apply_damage(target.id, int(final), dtype, logs=out)
+                dtype = getattr(op, "damage_type", "typeless")
+                pkt = DamagePacket(
+                    amount=max(0, int(final)),
+                    dkind=dtype,
+                    counts_as_magic=bool(getattr(op, "counts_as_magic", False)),
+                    counts_as_material=getattr(op, "counts_as_material", None),
+                    counts_as_alignment=getattr(op, "counts_as_alignment", None),
+                )
+                buffered_packets.append(pkt)
                 continue
+            else:
+                # If we encounter a non-damage op, flush any accumulated packets first
+                flush_packets()
+                # ... handle other ops as before ...
 
-    
+        # End: flush any remaining packets
+        flush_packets()
+        # NOTE: The original function returned `out`, but the new one doesn't explicitly. Assuming it should.
+        return out
 
     def tick_round(self) -> list[str]:
         logs: list[str] = []

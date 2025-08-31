@@ -202,10 +202,10 @@ M3 — Gates and damage pipeline
   - [x] SR gate (one CL check per target per use; SR:Yes only)
   - [x] Save gate (Fort/Ref/Will, DC expressions, branch policies: negates/half/partial/none)
   - [x] Attack gate (melee/ranged/touch/ray; crit confirm; concealment/miss chance)
-- [ ] Damage pipeline:
-  - [ ] 1) Immunity → 2) Type conversion → 3) Resist/DR/ablative pools → 4) Vulnerability → 5) Apply to HP/THP → 6) Injury rider negation (if DR reduced to 0) → 7) Post hooks
-  - [ ] DR policy: apply to total physical damage per attack (documented)
-  - [ ] Energy resist per packet, vulnerabilities, Temp HP before HP
+- [x] Damage pipeline:
+  - [x] 1) Immunity → 2) Type conversion → 3) Resist/DR/ablative pools → 4) Vulnerability → 5) Apply to HP/THP → 6) Injury rider negation (if DR reduced to 0) → 7) Post hooks
+  - [x] DR policy: apply to total physical damage per attack (documented)
+  - [x] Energy resist per packet, vulnerabilities, Temp HP before HP
 - [ ] Explain/trace for last action (rolls, stacking, damage breakdown)
 
 Acceptance: “Attack goblin” performs a full resolution with explain trace; DR/resist/vulnerability behave per spec.
