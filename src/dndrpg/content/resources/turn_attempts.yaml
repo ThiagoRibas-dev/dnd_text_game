@@ -1,0 +1,13 @@
+schema_version: 1
+id: res.turn_attempts
+name: Turn/Rebuke Undead
+scope: entity
+capacity:
+  formula: "3 + ability_mod('cha')"
+  computeAt: attach
+initial_current: "capacity"
+refresh:
+  cadence: per_day
+  behavior: reset_to_max
+visibility: public
+freezeOnAttach: false

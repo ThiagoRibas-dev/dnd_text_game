@@ -7,13 +7,14 @@ import yaml
 from pydantic import TypeAdapter, Field as PField
 from .models import Item, Weapon, Armor, Shield
 from .campaigns import CampaignDefinition, StartingKit
-from .schema_models import EffectDefinition  # blueprint
+from .schema_models import EffectDefinition, ResourceDefinition  # blueprint
 
 ItemUnion = Annotated[Union[Weapon, Armor, Shield, Item], PField(discriminator="type")]
 ItemAdapter = TypeAdapter(ItemUnion)
 CampaignAdapter = TypeAdapter(CampaignDefinition)
 KitAdapter = TypeAdapter(StartingKit)
 EffectAdapter = TypeAdapter(EffectDefinition)
+ResourceAdapter = TypeAdapter(ResourceDefinition)
 
 def _load_file(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
@@ -36,7 +37,8 @@ class ContentIndex:
     shields: Dict[str, Shield]
     campaigns: Dict[str, CampaignDefinition]
     kits: Dict[str, StartingKit]
-    effects: Dict[str, EffectDefinition]   # NEW
+    effects: Dict[str, EffectDefinition]
+    resources: Dict[str, ResourceDefinition]  # NEW
 
     def get_item(self, iid: str) -> Item:
         return self.items_by_id[iid]
@@ -44,8 +46,11 @@ class ContentIndex:
     def clone_item(self, iid: str) -> Item:
         return self.items_by_id[iid].model_copy(deep=True)
 
-    def get_effect(self, eid: str) -> EffectDefinition:  # NEW
+    def get_effect(self, eid: str) -> EffectDefinition:
         return self.effects[eid]
+
+    def get_resource(self, rid: str) -> ResourceDefinition:
+        return self.resources[rid]
 
 def load_content(base_dir: Path) -> ContentIndex:
     items_by_id: Dict[str, Item] = {}
@@ -93,7 +98,16 @@ def load_content(base_dir: Path) -> ContentIndex:
             raise RuntimeError(f"Duplicate effect id {eff.id} in {fp}")
         effects[eff.id] = eff
 
+    # Resources
+    resources: Dict[str, ResourceDefinition] = {}
+    for fp in _iter_files(base_dir / "resources"):
+        data = _load_file(fp)
+        res = ResourceAdapter.validate_python(data)
+        if res.id in resources:
+            raise RuntimeError(f"Duplicate resource id {res.id} in {fp}")
+        resources[res.id] = res
+
     return ContentIndex(
         items_by_id=items_by_id, weapons=weapons, armors=armors, shields=shields,
-        campaigns=campaigns, kits=kits, effects=effects
+        campaigns=campaigns, kits=kits, effects=effects, resources=resources
     )

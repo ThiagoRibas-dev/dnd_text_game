@@ -1,11 +1,15 @@
 from __future__ import annotations
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, TYPE_CHECKING
 from uuid import uuid4
 from pydantic import BaseModel, Field
 from .schema_models import EffectDefinition, DurationSpec
 from .expr import eval_for_actor
 from .models import Entity
 from .loader import ContentIndex
+from dndrpg.engine.resources_runtime import ResourceEngine
+
+if TYPE_CHECKING:
+    from .state import GameState
 
 class EffectInstance(BaseModel):
     instance_id: str = Field(default_factory=lambda: uuid4().hex)
@@ -34,9 +38,10 @@ class EffectsEngine:
     Gates/saves/attacks, modifiers, and operations execution will be wired in subsequent M2 steps.
     """
 
-    def __init__(self, content: ContentIndex, state: "GameState"):
+    def __init__(self, content: ContentIndex, state: "GameState", resources: ResourceEngine | None = None):
         self.content = content
         self.state = state
+        self.resources = resources or ResourceEngine(content, state)
 
     def _snapshot_duration_rounds(self, ed: EffectDefinition, source: Entity, target: Entity) -> tuple[str, Optional[int]]:
         # Returns (duration_type, remaining_rounds)
@@ -45,8 +50,6 @@ class EffectsEngine:
             # Already enforced by schema for Spell/Sp; allow continuous for passives
             return ("permanent", None)
         dt = ds.type
-        if dt == "instantaneous":
-            return ("instantaneous", None)
         if dt == "rounds":
             # value or formula; evaluate formula if present
             if ds.value is not None:
@@ -61,18 +64,53 @@ class EffectsEngine:
         # For minutes/hours/days/permanent/special, we record type; scheduler will translate later
         return (dt, None)
 
+    def _exec_operations_on_attach(self, ed: EffectDefinition, inst: EffectInstance, source: Entity, target: Entity, logs: list[str]):
+        # Minimal executor: temp_hp and resource.* ops
+        for op in ed.operations or []:
+            opname = getattr(op, "op", None)
+            if opname == "temp_hp":
+                amt = getattr(op, "amount", 0)
+                logs += self.resources.grant_temp_hp(target.id, amt, effect_instance_id=inst.instance_id)
+            elif opname == "resource.create":
+                rid = getattr(op, "resource_id", None)
+                if rid:
+                    rs, log2 = self.resources.create_from_definition(
+                        rid,
+                        owner_scope=op.owner_scope or None,
+                        owner_entity_id=target.id,
+                        owner_effect_instance_id=inst.instance_id,
+                        initial_current=op.initial_current
+                    )
+                    logs += log2
+            elif opname == "resource.restore":
+                rid = getattr(op, "resource_id", None)
+                if rid:
+                    if getattr(op, "to_max", False):
+                        self.resources.restore(target.id, rid, to_max=True)
+                    else:
+                        amt = getattr(op, "amount", None)
+                        if amt is not None:
+                            val = eval_for_actor(str(amt), source)
+                            self.resources.restore(target.id, rid, amount=int(val))
+            elif opname == "resource.spend":
+                rid = getattr(op, "resource_id", None)
+                amt = getattr(op, "amount", 0)
+                if rid:
+                    val = eval_for_actor(str(amt), source) if not isinstance(amt, (int,)) else amt
+                    self.resources.spend(target.id, rid, int(val))
+            elif opname == "resource.set":
+                rid = getattr(op, "resource_id", None)
+                cur = getattr(op, "current", None)
+                if rid and cur is not None:
+                    val = eval_for_actor(str(cur), source) if not isinstance(cur, (int,)) else cur
+                    self.resources.set_current(target.id, rid, int(val))
+
     def attach(self, effect_id: str, source: Entity, target: Entity) -> list[str]:
-        """
-        Create and attach an EffectInstance from EffectDefinition, snapshotting basic duration.
-        Instantaneous effects are not retained (we’ll execute operations in later steps).
-        """
         logs: list[str] = []
         if effect_id not in self.content.effects:
             return [f"[Effects] Unknown effect id: {effect_id}"]
-
         ed = self.content.effects[effect_id]
         dur_type, rem_rounds = self._snapshot_duration_rounds(ed, source, target)
-
         inst = EffectInstance(
             definition_id=ed.id,
             name=ed.name,
@@ -83,13 +121,11 @@ class EffectsEngine:
             remaining_rounds=rem_rounds,
             started_at_round=self.state.round_counter
         )
-
+        # Execute on-attach operations now
+        self._exec_operations_on_attach(ed, inst, source, target, logs)
         if dur_type == "instantaneous":
-            # For now: log only; later we’ll execute ed.operations immediately and skip retention
             logs.append(f"[Effects] {ed.name} (instantaneous) applied to {target.name}")
             return logs
-
-        # Retain persistent instance
         self.state.active_effects.setdefault(target.id, []).append(inst)
         logs.append(f"[Effects] {ed.name} attached to {target.name} ({dur_type}{f' {rem_rounds} rounds' if rem_rounds is not None else ''})")
         return logs

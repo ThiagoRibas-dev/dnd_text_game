@@ -3,19 +3,37 @@ from pydantic import BaseModel, Field
 from typing import Dict, List
 from .models import Entity, Abilities, AbilityScore, Size, Item
 from .loader import ContentIndex
-from .effects_runtime import EffectInstance # NEW: moved to top
+from .effects_runtime import EffectInstance
+from .resources_runtime import ResourceState
 
 class GameState(BaseModel):
     player: Entity
     log: list[str] = Field(default_factory=list)
-    # NEW: runtime effects and a simple round counter
-    active_effects: Dict[str, List["EffectInstance"]] = Field(default_factory=dict)
+    active_effects: Dict[str, List[EffectInstance]] = Field(default_factory=dict)
     round_counter: int = 0
+    # NEW: resource storage: map owner key -> list of ResourceState
+    resources: Dict[str, List[ResourceState]] = Field(default_factory=dict)
     seed: int = Field(default_factory=lambda: random.randint(0, 2**32 - 1))
     rng_state: tuple = Field(default_factory=lambda: random.getstate())
 
     def resources_summary(self) -> dict[str, int]:
-        return {"Spell Slots (1st)": 2, "Turn Attempts": 3}
+        # Aggregate entity-scoped resources for player
+        out: dict[str, int] = {}
+        key = f"entity:{self.player.id}"
+        for rs in self.resources.get(key, []):
+            nm = rs.name or (rs.definition_id or "resource")
+            out[nm] = rs.current
+        # Sum Temp HP from all effect-instance scopes for this entity
+        total_thp = 0
+        for k, lst in self.resources.items():
+            if not k.startswith("effect:"):
+                continue
+            for rs in lst:
+                if rs.owner_entity_id == self.player.id and (rs.definition_id == "res.temp_hp" or (rs.name and "Temp" in rs.name)):
+                    total_thp += rs.current
+        if total_thp > 0:
+            out["Temp HP"] = total_thp
+        return out
 
     def initialize_rng(self):
         random.setstate(self.rng_state)

@@ -5,6 +5,7 @@ from .campaigns import CampaignDefinition
 from .models import Entity, Abilities, AbilityScore, Size
 from .save import save_game, load_game, list_saves, latest_save
 from .effects_runtime import EffectsEngine
+from .resources_runtime import ResourceEngine
 
 ENGINE_VERSION = "0.1.0"
 
@@ -34,7 +35,8 @@ class GameEngine:
         self.content: ContentIndex = load_content(self.content_dir)
         self.campaign: CampaignDefinition | None = None
         self.state: GameState = default_state(self.content)
-        self.effects = EffectsEngine(self.content, self.state)  # NEW
+        self.resources = ResourceEngine(self.content, self.state)
+        self.effects = EffectsEngine(self.content, self.state, self.resources)
         self.slot_id: str | None = None
 
     # — New Game flow helpers —
@@ -136,6 +138,13 @@ class GameEngine:
             out.append("You travel. (stub)")
         elif c.startswith("save"):
             out.append(self.save_current()[0])
+        elif c.startswith("resources"):
+            info = self.state.resources_summary()
+            if not info:
+                out.append("No resources.")
+            else:
+                for k, v in info.items():
+                    out.append(f"{k}: {v}")
         else:
             out.append(f"Unknown command: {cmd}")
         return out

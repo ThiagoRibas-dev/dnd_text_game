@@ -15,15 +15,17 @@ A central "Mode Manager" handles transitions between these states. The game will
 
 ### Notes and Rules ###
 
-**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail, consider possibilities, brainstorm), Iteration > request and wait permission to Execute/Implement > Update Roadmap (GEMINI.md file) > Summarize changes > Ask for next step.
+**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail, consider possibilities, brainstorm), Iteration > request and wait permission to Execute/Implement > Update Roadmap (GEMINI.md file) > Summarize changes > Ask for next step. Always ponder and consider the possible downstream effects of changes.
 
 **Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why). Only once the plan has been accepted, we will execute the plan and edit the files in question.
 
-**Editing Files:** Avoid trying to avoid whole files at once. Edit specific, directed snippets at a time.
+**Editing Files:** Avoid trying to avoid whole files at once. Edit specific, directed snippets at a time, always planning the chain of edits.
 
 **Ruff Linter:** After performing a batch of changes, always run `ruff check . --fix` to ensure things are in order.
 
 **Running the Game:** Use the command `uv run python -m dndrpg`.
+
+**Tool error:** After trying to use a tool such as `new_string`, `replace`, etc, to interact with the repository, stop the attempts and ask the User for help, providing a summary of the attempted additions/changes.
 
 ---
 
@@ -166,7 +168,7 @@ Acceptance: Can load a player, stats compute correctly, content files validate, 
 
 M2 — Effects/State engine (definitions → instances)
 - [x] EffectDefinition/EffectInstance implemented (blueprint vs runtime)
-- [ ] ResourceDefinition/ResourceState implemented (capacity formulas, refresh cadence)
+- [x] ResourceDefinition/ResourceState implemented (capacity formulas, refresh cadence)
 - [ ] ConditionDefinition/ConditionInstance implemented
 - [ ] Modifiers engine with stacking rules:
   - [ ] Typed bonuses (enhancement, morale, luck, insight, competence, sacred, profane, resistance, deflection, dodge, size, natural armor)

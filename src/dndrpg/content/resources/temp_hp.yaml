@@ -1,0 +1,17 @@
+schema_version: 1
+id: res.temp_hp
+name: Temporary Hit Points
+scope: effect-instance
+capacity:
+  formula: "amount"         # note: this is a dummy for ad-hoc grants; initial_current will override
+  computeAt: attach
+initial_current: "capacity"
+refresh:
+  cadence: special
+  behavior: no_change
+visibility: public
+freezeOnAttach: true
+absorption:
+  absorbTypes: ["any"]
+  absorbPerHit: 999999
+  absorbOrder: after_dr
