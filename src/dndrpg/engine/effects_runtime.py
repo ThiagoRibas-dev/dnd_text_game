@@ -190,6 +190,25 @@ class EffectsEngine:
     def _exec_operations_on_attach(self, ed: EffectDefinition, inst: EffectInstance, source: Entity, target: Entity, logs: list[str]):
         self.execute_operations(list(ed.operations or []), source, target, parent_instance_id=inst.instance_id, logs=logs)
 
+    def tick_round(self) -> list[str]:
+        logs: list[str] = []
+        # decrement remaining_rounds for each entity's effects; detach on 0
+        for entity_id, lst in list(self.state.active_effects.items()):
+            keep: list[EffectInstance] = []
+            for inst in lst:
+                if inst.duration_type == "rounds" and inst.remaining_rounds is not None:
+                    if inst.remaining_rounds > 0:
+                        inst.remaining_rounds -= 1
+                    if inst.remaining_rounds <= 0:
+                        # unregister hooks and drop
+                        if self.hooks:
+                            self.hooks.unregister_by_parent(inst.instance_id)
+                        logs.append(f"[Effects] {inst.name} expired")
+                        continue
+                keep.append(inst)
+            self.state.active_effects[entity_id] = keep
+        return logs
+
     def attach(self, effect_id: str, source: Entity, target: Entity) -> list[str]:
         logs: list[str] = []
         if effect_id not in self.content.effects:

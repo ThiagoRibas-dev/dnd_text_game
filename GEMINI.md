@@ -22,7 +22,8 @@ A central "Mode Manager" handles transitions between these states. The game will
   - Iteration
   - Request and wait for permission to Execute/Implement
   - Execution/implementation (reading files, creating/editing/deleting, etc)
-  - Run ruff then run the game
+  - Run ruff to check for errors
+  - Run the game to check for errors
   - Update Roadmap (GEMINI.md file)
   - Summarize changes
   - Ask for next step
@@ -191,8 +192,8 @@ M2 — Effects/State engine (definitions → instances)
 - [x] Expression compilation cache
   - [x] Precompile expressions to AST on load; cache by string
   - [x] Benchmark: ensure eval hot paths (damage, saves) avoid re-parsing
-- [ ] TargetPath registry
-  - [ ] Central registry with metadata (type, allowed ops, requires bonusType?) used by schema and runtime checks
+- [x] TargetPath registry
+  - [x] Central registry with metadata (type, allowed ops, requires bonusType?) used by schema and runtime checks
 
 Acceptance: Can attach a self-buff with typed modifiers and a timed duration; modifiers apply and expire correctly; untyped same-source does not stack.
 

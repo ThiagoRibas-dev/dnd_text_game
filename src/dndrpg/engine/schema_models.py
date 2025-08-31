@@ -84,32 +84,22 @@ class Modifier(BaseModel):
             errs.append(f"modifier.value is required for operator '{self.operator}'")
 
         # 4) Operator+target combos and bonusType requirements
-        if prefix == "tags":
-            if self.operator not in {"grantTag","removeTag"}:
-                errs.append("tags.* supports only 'grantTag' or 'removeTag'")
-        elif prefix == "speed":
-            if self.operator not in {"add","set","multiply","min","max","cap","clamp"}:
-                errs.append("speed.* allows only add/set/multiply/min/max/cap/clamp")
-        elif prefix == "senses":
-            if self.operator not in {"add","set","min","max"}:
-                errs.append("senses.* allows only add/set/min/max")
-        elif prefix in {"resist","dr"}:
-            if self.operator in {"multiply","divide"}:
-                errs.append(f"{prefix}.* does not support '{self.operator}' (use add/set/max)")
-        elif prefix == "resources":
-            if self.operator not in {"add","set","min","max","cap","clamp"}:
-                errs.append("resources.* allows only add/set/min/max/cap/clamp")
-        elif prefix in {"ac","save","abilities","attack","bab"}:
-            # Disallow weird math on core combat stats
-            if self.operator in {"multiply","divide"} and prefix in {"ac","save","abilities"}:
-                errs.append(f"{prefix}.* does not support '{self.operator}'")
-            # For additive bonuses on typed-stacking stats, require a bonusType
-            if self.operator in {"add","subtract"}:
+        from dndrpg.engine.targetpaths_registry import resolve_meta
+
+        # TargetPath registry check
+        meta = resolve_meta(self.targetPath)
+        if not meta:
+            errs.append(f"Unknown or unsupported targetPath '{self.targetPath}' (not in TargetPath registry)")
+        else:
+            # Allowed operators
+            if self.operator not in meta.allowed_ops:
+                errs.append(f"Operator '{self.operator}' not allowed for {self.targetPath}; allowed: {sorted(meta.allowed_ops)}")
+            # Bonus-type policy for additive/subtractive
+            if self.operator in {"add","subtract"} and meta.require_bonus_type_for_add:
                 if self.bonusType is None:
-                    errs.append(
-                        f"{prefix} additive modifiers require bonusType "
-                        f"(use 'unnamed' if truly untyped; beware stacking)"
-                    )
+                    errs.append(f"{self.targetPath}: additive modifiers require bonusType (use 'unnamed' if truly untyped)")
+                elif meta.allowed_bonus_types is not None and self.bonusType not in meta.allowed_bonus_types:
+                    errs.append(f"{self.targetPath}: bonusType '{self.bonusType}' invalid; allowed: {sorted(meta.allowed_bonus_types)}")
         # 5) convertType belongs in rules/hook actions, not generic modifiers
         if self.operator == "convertType":
             errs.append("operator 'convertType' is not valid as a generic Modifier; use a RuleHook action")

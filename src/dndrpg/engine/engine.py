@@ -143,6 +143,7 @@ class GameEngine:
             out += self.hooks.scheduler_event(self.state.player.id, "startOfTurn")
             # tick conditions/resources per-round
             out += self.conditions.tick_round()
+            out += self.effects.tick_round()
             self.resources.refresh_cadence("per_round")
             out += self.zones.tick_round()
             # endOfTurn
