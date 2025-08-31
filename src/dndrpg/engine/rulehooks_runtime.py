@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Literal
 from uuid import uuid4
 from pydantic import BaseModel, Field
 
-from dndrpg.engine.schema_models import RuleHook, EffectDefinition, ConditionDefinition, HookAction
+from dndrpg.engine.schema_models import RuleHook, EffectDefinition, ConditionDefinition, HookAction, ZoneDefinition
 from dndrpg.engine.models import Entity
 from dndrpg.engine.loader import ContentIndex
 from typing import TYPE_CHECKING
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from dndrpg.engine.effects_runtime import EffectsEngine
     from dndrpg.engine.conditions_runtime import ConditionsEngine
     from dndrpg.engine.resources_runtime import ResourceEngine
-from .state import GameState
+    from .state import GameState
 
 # ------------------------------
 # Runtime types
@@ -37,11 +37,7 @@ class RegisteredHook(BaseModel):
     actions: List[HookAction] = Field(default_factory=list)
     priority: int = 0
 
-    source_kind: Literal["effect","condition"] = "effect"
-    source_id: str
-    source_name: str
-    parent_instance_id: str
-    target_entity_id: str
+    source_kind: Literal["effect","condition","zone"] = "effect"
 
 class RuleHooksRegistry:
     """
@@ -75,6 +71,11 @@ class RuleHooksRegistry:
         for h in cd.ruleHooks or []:
             self._register(h, source_kind="condition", source_id=cd.id, source_name=cd.name,
                            parent_instance_id=parent_instance_id, target_entity_id=target_entity_id)
+
+    def register_for_zone(self, zd: ZoneDefinition, zone_instance_id: str, target_entity_id: str):
+        for h in zd.hooks or []:
+            self._register(h, source_kind="zone", source_id=zd.id, source_name=zd.name,
+                           parent_instance_id=zone_instance_id, target_entity_id=target_entity_id)
 
     def _register(self, hook_def: RuleHook, *, source_kind: str, source_id: str, source_name: str,
                   parent_instance_id: str, target_entity_id: str):

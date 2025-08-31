@@ -1,0 +1,12 @@
+schema_version: 1
+id: spell.test_heal
+name: Test Heal
+source: spell
+abilityType: Spell
+activation: { action: standard }
+range: { type: personal }
+duration: { type: instantaneous }
+gates: { sr: { applies: false } }
+operations:
+  - op: heal_hp
+    amount: 3

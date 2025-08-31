@@ -1,0 +1,13 @@
+schema_version: 1
+id: spell.test_burn
+name: Test Burn
+source: spell
+abilityType: Spell
+activation: { action: standard }
+range: { type: personal }
+duration: { type: instantaneous }
+gates: { sr: { applies: false } }
+operations:
+  - op: damage
+    amount: 5
+    damage_type: fire

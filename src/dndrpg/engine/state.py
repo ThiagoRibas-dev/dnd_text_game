@@ -6,6 +6,7 @@ from .loader import ContentIndex
 from .effects_runtime import EffectInstance
 from .resources_runtime import ResourceState
 from .conditions_runtime import ConditionInstance  # NEW
+from .zones_runtime import ZoneInstance
 
 class GameState(BaseModel):
     player: Entity
@@ -15,6 +16,7 @@ class GameState(BaseModel):
     round_counter: int = 0
     # NEW: resource storage: map owner key -> list of ResourceState
     resources: Dict[str, List[ResourceState]] = Field(default_factory=dict)
+    active_zones: Dict[str, List[ZoneInstance]] = Field(default_factory=dict)  # owner_entity_id -> zones
     seed: int = Field(default_factory=lambda: random.randint(0, 2**32 - 1))
     rng_state: tuple = Field(default_factory=lambda: random.getstate())
 

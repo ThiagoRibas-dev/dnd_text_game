@@ -15,13 +15,25 @@ A central "Mode Manager" handles transitions between these states. The game will
 
 ### Notes and Rules ###
 
-**Workflow:** Examination > Planning (what, where, how, why) > Refining (break into components, detail, consider possibilities, brainstorm), Iteration > request and wait permission to Execute/Implement > Update Roadmap (GEMINI.md file) > Summarize changes > Ask for next step. Always ponder and consider the possible downstream effects of changes.
+**Workflow:** 
+  - Examination
+  - Planning (what, where, how, why)
+  - Refining (break into components, detail, consider possibilities, brainstorm)
+  - Iteration
+  - Request and wait for permission to Execute/Implement
+  - Execution/implementation (reading files, creating/editing/deleting, etc)
+  - Run ruff
+  - If errors are found, go back to the Examination Phase
+  - Update Roadmap (GEMINI.md file)
+  - Summarize changes
+  - Ask for next step
+Always ponder and consider the possible downstream effects of changes.
 
 **Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why). Only once the plan has been accepted, we will execute the plan and edit the files in question.
 
-**Editing Files:** Avoid trying to avoid whole files at once. Edit specific, directed snippets at a time, always planning the chain of edits.
+**Editing Files:** Avoid trying to edit whole files at once. Edit specific, directed snippets at a time, always planning the chain of edits.
 
-**Ruff Linter:** After performing a batch of changes, always run `ruff check . --fix` to ensure things are in order.
+**Ruff Linter:** During Execution, after performing a batch of changes, always run `ruff check . --fix` to ensure things are in order.
 
 **Running the Game:** Use the command `uv run python -m dndrpg`.
 
@@ -175,7 +187,7 @@ M2 — Effects/State engine (definitions → instances)
   - [x] Unnamed bonuses + same-sourceKey non-stacking
   - [x] Operator ordering: set/replace → add/sub (stacking) → mul/div → min/max → cap/clamp
 - [x] Rule hooks registry (incoming.effect, on.attack pre/post, on.save pre/post, scheduler ticks, incoming.damage)
-- [ ] Operations: damage/heal (HP/nonlethal/ability dmg/drain), apply/remove condition, (create/spend/restore) resource, attach/detach effects, create zone
+- [x] Operations: damage/heal (HP/nonlethal/ability dmg/drain), apply/remove condition, (create/spend/restore) resource, attach/detach effects, create zone
 - [ ] Antimagic/suppression flags per abilityType (Ex/Su/Sp/Spell)
 - [ ] Expression compilation cache
   - [ ] Precompile expressions to AST on load; cache by string

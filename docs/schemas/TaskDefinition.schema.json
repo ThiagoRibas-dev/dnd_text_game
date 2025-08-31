@@ -643,6 +643,90 @@
       "title": "DurationSpec",
       "type": "object"
     },
+    "OpAbilityDamage": {
+      "properties": {
+        "op": {
+          "const": "ability.damage",
+          "default": "ability.damage",
+          "title": "Op",
+          "type": "string"
+        },
+        "ability": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "title": "Ability",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Amount"
+        }
+      },
+      "required": [
+        "ability",
+        "amount"
+      ],
+      "title": "OpAbilityDamage",
+      "type": "object"
+    },
+    "OpAbilityDrain": {
+      "properties": {
+        "op": {
+          "const": "ability.drain",
+          "default": "ability.drain",
+          "title": "Op",
+          "type": "string"
+        },
+        "ability": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "title": "Ability",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Amount"
+        }
+      },
+      "required": [
+        "ability",
+        "amount"
+      ],
+      "title": "OpAbilityDrain",
+      "type": "object"
+    },
     "OpAttachEffect": {
       "properties": {
         "op": {
@@ -702,7 +786,6 @@
           "default": null
         },
         "params": {
-          "additionalProperties": true,
           "title": "Params",
           "type": "object"
         },
@@ -1222,6 +1305,8 @@
           "items": {
             "discriminator": {
               "mapping": {
+                "ability.damage": "#/$defs/OpAbilityDamage",
+                "ability.drain": "#/$defs/OpAbilityDrain",
                 "attach": "#/$defs/OpAttachEffect",
                 "condition.apply": "#/$defs/OpConditionApply",
                 "condition.remove": "#/$defs/OpConditionRemove",
@@ -1255,6 +1340,12 @@
               },
               {
                 "$ref": "#/$defs/OpTempHP"
+              },
+              {
+                "$ref": "#/$defs/OpAbilityDamage"
+              },
+              {
+                "$ref": "#/$defs/OpAbilityDrain"
               },
               {
                 "$ref": "#/$defs/OpConditionApply"
@@ -1319,6 +1410,8 @@
           "items": {
             "discriminator": {
               "mapping": {
+                "ability.damage": "#/$defs/OpAbilityDamage",
+                "ability.drain": "#/$defs/OpAbilityDrain",
                 "attach": "#/$defs/OpAttachEffect",
                 "condition.apply": "#/$defs/OpConditionApply",
                 "condition.remove": "#/$defs/OpConditionRemove",
@@ -1352,6 +1445,12 @@
               },
               {
                 "$ref": "#/$defs/OpTempHP"
+              },
+              {
+                "$ref": "#/$defs/OpAbilityDamage"
+              },
+              {
+                "$ref": "#/$defs/OpAbilityDrain"
               },
               {
                 "$ref": "#/$defs/OpConditionApply"
@@ -1454,6 +1553,8 @@
           "items": {
             "discriminator": {
               "mapping": {
+                "ability.damage": "#/$defs/OpAbilityDamage",
+                "ability.drain": "#/$defs/OpAbilityDrain",
                 "attach": "#/$defs/OpAttachEffect",
                 "condition.apply": "#/$defs/OpConditionApply",
                 "condition.remove": "#/$defs/OpConditionRemove",
@@ -1487,6 +1588,12 @@
               },
               {
                 "$ref": "#/$defs/OpTempHP"
+              },
+              {
+                "$ref": "#/$defs/OpAbilityDamage"
+              },
+              {
+                "$ref": "#/$defs/OpAbilityDrain"
               },
               {
                 "$ref": "#/$defs/OpConditionApply"
@@ -1672,7 +1779,6 @@
         "set_stats": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -1869,7 +1975,6 @@
           "type": "string"
         },
         "match": {
-          "additionalProperties": true,
           "title": "Match",
           "type": "object"
         },
@@ -1977,7 +2082,6 @@
         "duration": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -2059,6 +2163,7 @@
   },
   "properties": {
     "id": {
+      "pattern": "^[a-z0-9_.:-]+$",
       "title": "Id",
       "type": "string"
     },

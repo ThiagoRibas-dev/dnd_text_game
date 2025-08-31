@@ -1,0 +1,13 @@
+schema_version: 1
+id: spell.test_poison
+name: Test Poison
+source: spell
+abilityType: Spell
+activation: { action: standard }
+range: { type: personal }
+duration: { type: instantaneous }
+gates: { sr: { applies: false } }
+operations:
+  - op: ability.damage
+    ability: con
+    amount: 2

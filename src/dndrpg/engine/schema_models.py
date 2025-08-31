@@ -154,6 +154,18 @@ class OpTempHP(BaseModel):
     op: Literal["temp_hp"] = "temp_hp"
     amount: Expr
 
+AbilityName = Literal["str","dex","con","int","wis","cha"]
+
+class OpAbilityDamage(BaseModel):
+    op: Literal["ability.damage"] = "ability.damage"
+    ability: AbilityName
+    amount: Expr
+
+class OpAbilityDrain(BaseModel):
+    op: Literal["ability.drain"] = "ability.drain"
+    ability: AbilityName
+    amount: Expr
+
 class OpConditionApply(BaseModel):
     op: Literal["condition.apply"] = "condition.apply"
     id: str
@@ -306,6 +318,7 @@ class OpSchedule(BaseModel):
 Operation = Annotated[
     Union[
         OpDamage, OpHealHP, OpTempHP,
+        OpAbilityDamage, OpAbilityDrain,
         OpConditionApply, OpConditionRemove,
         OpResourceCreate, OpResourceSpend, OpResourceRestore, OpResourceSet,
         OpZoneCreate, OpZoneDestroy,
@@ -666,7 +679,7 @@ class EffectDefinition(BaseModel):
     choices: Optional[List[Dict[str, Any]]] = None
 
     srApplies: Optional[bool] = None
-    antimagic: Optional[bool] = None
+    antimagic_suppression: Optional[List[AbilityType]] = None
     dispellable: Optional[bool] = None
 
     @model_validator(mode="after")
@@ -1008,3 +1021,5 @@ CompletionSpec.model_rebuild()
 TaskDefinition.model_rebuild()
 ZoneSuppression.model_rebuild()
 ZoneDefinition.model_rebuild()
+OpAbilityDamage.model_rebuild()
+OpAbilityDrain.model_rebuild()

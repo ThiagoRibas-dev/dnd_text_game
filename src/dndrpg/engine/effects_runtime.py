@@ -8,6 +8,8 @@ from .models import Entity
 from .loader import ContentIndex
 from dndrpg.engine.resources_runtime import ResourceEngine
 from dndrpg.engine.conditions_runtime import ConditionsEngine
+from .damage_runtime import DamageEngine
+from .zones_runtime import ZoneEngine
 if TYPE_CHECKING:
     from .state import GameState
     from dndrpg.engine.rulehooks_runtime import RuleHooksRegistry
@@ -40,26 +42,20 @@ class EffectsEngine:
     """
 
     def __init__(self, content: ContentIndex, state: "GameState",
-                 resources: ResourceEngine | None = None,
-                 conditions: ConditionsEngine | None = None,
-                 hooks: RuleHooksRegistry | None = None):
+                 resources: ResourceEngine | None = None, conditions: ConditionsEngine | None = None,
+                 hooks: RuleHooksRegistry | None = None, damage: DamageEngine | None = None, zones: ZoneEngine | None = None):
         self.content = content
         self.state = state
         self.resources = resources or ResourceEngine(content, state)
         self.conditions = conditions or ConditionsEngine(content, state)
         self.hooks = hooks  # may be set later by GameEngine to resolve circular init
+        self.damage = damage
+        self.zones = zones
 
     def execute_operations(self, ops: List[Operation], actor: Optional[Entity], target: Optional[Entity], *, 
                            parent_instance_id: Optional[str] = None, logs: Optional[List[str]] = None):
         out = logs if logs is not None else []
-        # dummy = EffectInstance(
-        #     definition_id="ops",
-        #     name="Ops",
-        #     abilityType="Ex",
-        #     source_entity_id=actor.id if actor else (target.id if target else ""),
-        #     target_entity_id=target.id if target else (actor.id if actor else ""),
-        #     duration_type="instantaneous"
-        # )
+        actor = actor or (target)  # fallback
         for op in ops:
             opname = getattr(op, "op", None)
             if opname == "temp_hp":
@@ -109,8 +105,85 @@ class EffectsEngine:
                 cid = getattr(op, "id", None)
                 if cid and target:
                     out += self.conditions.remove(cond_id=cid, target=target)
+            elif opname == "damage":
+                if not self.damage or not target:
+                    out.append("[Ops] damage: missing engine or target")
+                    continue
+                amt = getattr(op, "amount", 0)
+                dtype = getattr(op, "damage_type", "typeless")
+                val = amt if isinstance(amt, (int, float)) else eval_for_actor(str(amt), actor) if actor else 0
+                self.damage.apply_damage(target.id, int(val), dtype, logs=out)
+            elif opname == "heal_hp":
+                if not self.damage or not target:
+                    out.append("[Ops] heal_hp: missing engine or target")
+                    continue
+                amt = getattr(op, "amount", 0)
+                nlo = bool(getattr(op, "nonlethal_only", False))
+                val = amt if isinstance(amt, (int, float)) else eval_for_actor(str(amt), actor) if actor else 0
+                self.damage.heal_hp(target.id, int(val), nonlethal_only=nlo, logs=out)
+            elif opname == "ability.damage":
+                if not self.damage or not target:
+                    out.append("[Ops] ability.damage: missing engine or target")
+                    continue
+                ab = getattr(op, "ability", "str")
+                amt = getattr(op, "amount", 0)
+                val = amt if isinstance(amt, (int, float)) else eval_for_actor(str(amt), actor) if actor else 0
+                self.damage.ability_damage(target.id, ab, int(val), logs=out)
+            elif opname == "ability.drain":
+                if not self.damage or not target:
+                    out.append("[Ops] ability.drain: missing engine or target")
+                    continue
+                ab = getattr(op, "ability", "str")
+                amt = getattr(op, "amount", 0)
+                val = amt if isinstance(amt, (int, float)) else eval_for_actor(str(amt), actor) if actor else 0
+                self.damage.ability_drain(target.id, ab, int(val), logs=out)
+            elif opname == "attach":
+                eid = getattr(op, "effect_id", None)
+                if eid and actor and target:
+                    out += self.attach(eid, actor, target)
+            elif opname == "detach":
+                eid = getattr(op, "effect_id", None)
+                all_instances = bool(getattr(op, "all_instances", False))
+                if eid and target:
+                    # remove first/all instances by definition_id on target
+                    lst = self.state.active_effects.get(target.id, [])
+                    kept = []
+                    removed = 0
+                    for inst in lst:
+                        if inst.definition_id == eid and (all_instances or removed == 0):
+                            removed += 1
+                            if self.hooks:
+                                self.hooks.unregister_by_parent(inst.instance_id)
+                        else:
+                            kept.append(inst)
+                    self.state.active_effects[target.id] = kept
+                    out.append(f"[Effects] Detached {removed} instance(s) of {eid} from {target.name}")
+            elif opname == "zone.create":
+                if not self.zones or not target:
+                    out.append("[Ops] zone.create: missing engine or target")
+                    continue
+                zid = getattr(op, "zone_id", None)
+                if zid:
+                    _zi, log2 = self.zones.create_from_definition(zid, owner_entity_id=target.id)
+                    out += log2
+                else:
+                    shape = getattr(op, "shape", None)
+                    name = getattr(op, "name", None) or "Zone"
+                    duration = getattr(op, "duration", None)
+                    hooks = getattr(op, "hooks", None) or []
+                    if shape and duration:
+                        _zi, log2 = self.zones.create_inline(name=name, shape=shape, duration=duration, hooks=hooks, owner_entity_id=target.id)
+                        out += log2
+                    else:
+                        out.append("[Ops] zone.create: missing inline name+shape+duration")
+            elif opname == "zone.destroy":
+                if not self.zones or not target:
+                    out.append("[Ops] zone.destroy: missing engine or target")
+                    continue
+                zid = getattr(op, "zone_id", None)
+                zinst = getattr(op, "zone_instance_id", None)
+                out += self.zones.destroy(owner_entity_id=target.id, zone_definition_id=zid, zone_instance_id=zinst)
             elif opname == "save":
-                # Minimal: not implemented yet
                 out.append("[Ops] save op not implemented in executor")
         return out
 
@@ -141,6 +214,17 @@ class EffectsEngine:
             remaining_rounds=rem_rounds,
             started_at_round=self.state.round_counter
         )
+
+        # Check for initial suppression from active zones
+        if self.zones:
+            for zone_owner_id, zones_list in self.state.active_zones.items():
+                for zone_inst in zones_list:
+                    zd = self.content.zones.get(zone_inst.definition_id)
+                    if zd and zd.suppression and zd.suppression.kind == "antimagic":
+                        if ed.abilityType in (zd.suppression.ability_types or []): # Assuming ability_types is a new field in ZoneSuppression
+                            inst.suppressed = True
+                            inst.suppressed_by.append(f"zone:{zone_inst.instance_id}")
+                            logs.append(f"[Effects] {inst.name} initially suppressed by antimagic zone {zone_inst.name}")
 
         # Execute operations on attach
         self._exec_operations_on_attach(ed, inst, source, target, logs)

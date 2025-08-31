@@ -9,6 +9,8 @@ from .resources_runtime import ResourceEngine
 from .conditions_runtime import ConditionsEngine
 from .modifiers_runtime import ModifiersEngine
 from .rulehooks_runtime import RuleHooksRegistry
+from .damage_runtime import DamageEngine
+from .zones_runtime import ZoneEngine
 
 ENGINE_VERSION = "0.1.0"
 
@@ -41,12 +43,16 @@ class GameEngine:
         self.resources = ResourceEngine(self.content, self.state)
         self.conditions = ConditionsEngine(self.content, self.state)
         self.effects = EffectsEngine(self.content, self.state, self.resources, self.conditions)
-        self.modifiers = ModifiersEngine(self.content, self.state)
-        # Now create the hooks and rebind engines to it
+        self.damage = DamageEngine(self.content, self.state)
+        # Create hooks first? We need hooks for zones to register; create hooks then zones:
         self.hooks = RuleHooksRegistry(self.content, self.state, self.effects, self.conditions, self.resources)
-        # Rebind engines to refer to the shared registry (circular-safe since we already created them)
+        self.zones = ZoneEngine(self.content, self.state, self.hooks)
+        # Rebind engines to shared registry + zone/damage
         self.conditions.hooks = self.hooks
         self.effects.hooks = self.hooks
+        self.effects.damage = self.damage
+        self.effects.zones = self.zones
+        self.modifiers = ModifiersEngine(self.content, self.state)
         self.slot_id: str | None = None
 
     # — New Game flow helpers —
@@ -135,6 +141,7 @@ class GameEngine:
             # tick conditions/resources per-round
             out += self.conditions.tick_round()
             self.resources.refresh_cadence("per_round")
+            out += self.zones.tick_round()
             # endOfTurn
             out += self.hooks.scheduler_event(self.state.player.id, "endOfTurn")
         elif c.startswith("status"):

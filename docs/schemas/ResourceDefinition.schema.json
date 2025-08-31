@@ -180,6 +180,7 @@
   },
   "properties": {
     "id": {
+      "pattern": "^[a-z0-9_.:-]+$",
       "title": "Id",
       "type": "string"
     },
