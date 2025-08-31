@@ -299,3 +299,152 @@ class ModifiersEngine:
             "attack_ranged_bonus": attack_ranged,
             "speed_land": speed_land,
         }
+
+    def apply_with_trace(self, base: float, mods: List[EvaluatedMod]) -> tuple[float, list[str]]:
+        lines: list[str] = []
+        current = base
+        # set/replace
+        for em in mods:
+            if em.operator in ("set","replace"):
+                lines.append(f'  set → {em.value} from {em.source_name} [{em.source_kind}]')
+                current = em.value
+        # add/sub
+        by_type: Dict[str, List[EvaluatedMod]] = {}
+        untyped: List[EvaluatedMod] = []
+        for em in mods:
+            if em.operator not in ("add","subtract"): 
+                continue
+            if em.bonusType: 
+                by_type.setdefault(em.bonusType, []).append(em)
+            else: 
+                untyped.append(em)
+        # typed
+        add_total = 0.0
+        for btype, lst in by_type.items():
+            if btype in TYPED_STACK:
+                delta = sum((em.value if em.operator=='add' else -em.value) for em in lst)
+                add_total += delta
+                for em in lst:
+                    lines.append(f'  {btype} {"+" if em.operator=="add" else ""}{em.value} from {em.source_name} [stack]')
+            else:
+                vals = [(em.value if em.operator=='add' else -em.value, em) for em in lst]
+                if not vals: 
+                    continue
+                best_val, best_em = max(vals, key=lambda t: t[0])
+                add_total += best_val
+                # show all contenders; mark chosen
+                for v, em in vals:
+                    tag = " (chosen)" if v == best_val else ""
+                    lines.append(f'  {btype} {"+" if em.operator=="add" else ""}{em.value} from {em.source_name}{tag}')
+        # untyped (same-sourceKey no-stack)
+        by_source: Dict[Optional[str], List[EvaluatedMod]] = {}
+        for em in untyped:
+            by_source.setdefault(em.sourceKey, []).append(em)
+        for skey, lst in by_source.items():
+            if skey is None:
+                s = sum((em.value if em.operator=='add' else -em.value) for em in lst)
+                add_total += s
+                for em in lst:
+                    lines.append(f'  untyped {"+" if em.operator=="add" else ""}{em.value} from {em.source_name}')
+            else:
+                vals = [(em.value if em.operator=='add' else -em.value, em) for em in lst]
+                best_val, best_em = max(vals, key=lambda t: t[0])
+                add_total += best_val
+                for v, em in vals:
+                    tag = " (chosen same-source)" if v == best_val else " (same-source dropped)"
+                    lines.append(f'  untyped {"+" if em.operator=="add" else ""}{em.value} from {em.source_name}{tag}')
+        current += add_total
+
+        # multiply/divide
+        factor = 1.0
+        for em in mods:
+            if em.operator == "multiply": 
+                factor *= em.value
+            elif em.operator == "divide" and em.value != 0: 
+                factor *= (1.0/em.value)
+        if factor != 1.0:
+            lines.append(f"  × {factor}")
+        current *= factor
+
+        # min/max
+        minb = None
+        maxb = None
+        for em in mods:
+            if em.operator == "min": 
+                minb = em.value if minb is None else max(minb, em.value)
+            elif em.operator == "max": 
+                maxb = em.value if maxb is None else min(maxb, em.value)
+        if minb is not None: 
+            lines.append(f"  min {minb}")
+        if maxb is not None: 
+            lines.append(f"  max {maxb}")
+        if minb is not None: 
+            current = max(current, minb)
+        if maxb is not None: 
+            current = min(current, maxb)
+
+        # cap/clamp
+        for em in mods:
+            if em.operator in ("cap","clamp"):
+                lines.append(f"  cap {em.value}")
+                current = min(current, em.value)
+        return current, lines
+
+    def explain_paths(self, entity: Entity, paths: list[str]) -> list[str]:
+        lines: list[str] = []
+        all_mods = self.collect_for_entity(entity.id)
+        for path in paths:
+            mods = all_mods.get(path, [])
+            if not mods:
+                continue
+            base = 0.0
+            if path == "ac.natural":
+                base = entity.natural_armor
+            # other bases 0 for additive components
+            final, plines = self.apply_with_trace(base, mods)
+            lines.append(f"{path}: base {base} → {int(round(final))}")
+            lines.extend(plines)
+        return lines
+
+    def diff_stats(self, before: dict, after: dict) -> list[str]:
+        # show diffs for abilities, ac_total, saves, attacks, speed
+        interesting = [
+            ("STR", "abilities['str']"),
+            ("DEX","abilities['dex']"),
+            ("CON","abilities['con']"),
+            ("INT","abilities['int']"),
+            ("WIS","abilities['wis']"),
+            ("CHA","abilities['cha']"),
+            ("AC", "ac_total"),
+            ("Touch", "ac_touch"),
+            ("FF", "ac_ff"),
+            ("Fort","save_fort"),
+            ("Ref","save_ref"),
+            ("Will","save_will"),
+            ("Melee","+attack_melee_bonus"),
+            ("Ranged","+attack_ranged_bonus"),
+            ("Speed","speed_land"),
+        ]
+        lines = ["[Stacking] Resolved stat changes:"]
+        
+        def get_value(data, key_str):
+            if "abilities" in key_str:
+                ability = key_str.split("'")[1]
+                return data["abilities"][ability]
+            else:
+                return data[key_str.strip('+')]
+
+        for label, key in interesting:
+            val_b = get_value(before, key)
+            val_a = get_value(after, key)
+            if val_a != val_b:
+                if isinstance(val_a, (int, float)) and isinstance(val_b, (int, float)):
+                    diff = val_a - val_b
+                    sign = "+" if diff > 0 else ""
+                    lines.append(f'  {label}: {val_b} → {val_a} ({sign}{diff})')
+                else:
+                    lines.append(f'  {label}: {val_b} → {val_a}')
+
+        if len(lines) == 1:
+            lines.append("  (no changes)")
+        return lines

@@ -3,7 +3,7 @@ from typing import Optional, Dict, List, TYPE_CHECKING
 from uuid import uuid4
 import random
 from pydantic import BaseModel, Field
-from .schema_models import Operation
+from .schema_models import Operation, EffectDefinition
 from .expr import eval_for_actor
 from .models import Entity
 from .loader import ContentIndex
@@ -11,8 +11,9 @@ from dndrpg.engine.resources_runtime import ResourceEngine
 from dndrpg.engine.conditions_runtime import ConditionsEngine
 from .damage_runtime import DamageEngine, DamagePacket, AttackContext
 from .zones_runtime import ZoneEngine
-from .gates_runtime import GatesEngine, GateOutcome
+from .gates_runtime import GatesEngine
 from .modifiers_runtime import ModifiersEngine
+from .trace import TraceSession
 
 if TYPE_CHECKING:
     from .state import GameState
@@ -125,32 +126,71 @@ class EffectsEngine:
             self.state.active_effects[entity_id] = keep
         return logs
 
+    def _snapshot_duration_rounds(self, ed: EffectDefinition, source: Entity, target: Entity) -> tuple[str, int | None]:
+        if not ed.duration:
+            return "instantaneous", None
+        dur_type = ed.duration.type
+        rem_rounds = None
+        if dur_type == "rounds":
+            base = ed.duration.num_rounds or 0
+            per_level = ed.duration.per_level or 0
+            if per_level > 0:
+                # Use source's appropriate caster level
+                cl = source.caster_level_for(ed.abilityType)
+                base += per_level * cl
+            rem_rounds = int(base)
+        return dur_type, rem_rounds
+
     def attach(self, effect_id: str, source: Entity, target: Entity) -> list[str]:
+        trace = TraceSession()
         logs: list[str] = []
         if effect_id not in self.content.effects:
+            self.state.last_trace = ["[Trace] Unknown effect id."]
             return [f"[Effects] Unknown effect id: {effect_id}"]
         ed = self.content.effects[effect_id]
 
-        # Antimagic / incoming.effect handled earlier (unchanged) ...
+        trace.add(f"[Effect] {ed.name} ({ed.abilityType}) on {target.name}")
+
+        # Antimagic and incoming.effect decisions
         if self.zones and ed.abilityType in ("Su","Sp","Spell"):
             if self.zones.is_entity_under_antimagic(target.id):
-                logs.append(f"[Effects] {ed.name} suppressed by antimagic; no effect")
+                msg = f"[Effects] {ed.name} suppressed by antimagic; no effect"
+                logs.append(msg)
+                trace.add(msg)
+                self.state.last_trace = trace.dump()
                 return logs
         if self.hooks:
             dec = self.hooks.incoming_effect(target.id, effect_def=ed, actor_entity_id=source.id)
+            trace.add(dec.notes and f"[Hooks] incoming.effect: {'; '.join(dec.notes)}" or "[Hooks] incoming.effect: allow")
             if not dec.allow:
-                logs.append(f"[Effects] {ed.name} blocked ({'; '.join(dec.notes)})")
+                msg = f"[Effects] {ed.name} blocked"
+                logs.append(msg)
+                trace.add(msg)
+                self.state.last_trace = trace.dump()
                 return logs
 
-        # Gates: SR -> Save -> Attack
+        # Before resolved stats
+        before_stats = self.modifiers.resolved_stats(target) if self.modifiers else None
+        if before_stats:
+            trace.add(f"[Before] AC {before_stats['ac_total']} (T {before_stats['ac_touch']}/FF {before_stats['ac_ff']}), "
+                      f"Atk +{before_stats['attack_melee_bonus']}/+{before_stats['attack_ranged_bonus']}, "
+                      f"Saves F+{before_stats['save_fort']} R+{before_stats['save_ref']} W+{before_stats['save_will']}")
+
+        # Gates
         if self.gates:
             outcome, glogs = self.gates.evaluate(ed, source, target)
             logs += glogs
+            trace.extend(glogs)
             if not outcome.allowed:
-                logs.append(f"[Effects] {ed.name} did not take effect")
+                msg = f"[Effects] {ed.name} did not take effect"
+                logs.append(msg)
+                trace.add(msg)
+                self.state.last_trace = trace.dump()
                 return logs
         else:
-            outcome = GateOutcome(True, None, None, None, 1.0, False, 1)  # type: ignore
+            from .gates_runtime import GateOutcome, SRResult, SaveResult, AttackResult
+            outcome = GateOutcome(True, SRResult(False,True,""), SaveResult(False,False,None,0,0,0,None,""),
+                                  AttackResult(False,True,False,1,0,0,0,False,""), 1.0, False, 1)
 
         dur_type, rem_rounds = self._snapshot_duration_rounds(ed, source, target)
         inst = EffectInstance(
@@ -159,21 +199,44 @@ class EffectsEngine:
             duration_type=dur_type, remaining_rounds=rem_rounds, started_at_round=self.state.round_counter
         )
 
-        # Execute operations with gate scaling/crit
-        self.execute_operations(list(ed.operations or []), source, target,
-                                parent_instance_id=inst.instance_id, logs=logs,
-                                damage_scale=outcome.damage_scale, crit_mult=outcome.crit_mult)
+        # Ops (with scaling/crit) → logs already from damage/resources/conditions
+        op_logs = self.execute_operations(list(ed.operations or []), source, target,
+                                          parent_instance_id=inst.instance_id, logs=[],
+                                          damage_scale=outcome.damage_scale, crit_mult=outcome.crit_mult)
+        logs += op_logs
+        trace.extend(op_logs)
 
         if dur_type == "instantaneous":
-            logs.append(f"[Effects] {ed.name} (instantaneous) applied to {target.name}")
+            msg = f"[Effects] {ed.name} (instantaneous) applied to {target.name}"
+            logs.append(msg)
+            trace.add(msg)
+            # After/stats diff (instantaneous conditions/resources may have changed display stats too)
+            after_stats = self.modifiers.resolved_stats(target) if self.modifiers else None
+            if before_stats and after_stats:
+                trace.extend(self.modifiers.diff_stats(before_stats, after_stats))
+            self.state.last_trace = trace.dump()
             return logs
 
+        # Retain & register hooks
         self.state.active_effects.setdefault(target.id, []).append(inst)
         if self.hooks:
             self.hooks.register_for_effect(ed, inst.instance_id, target.id)
         if self.zones:
             logs += self.zones.update_suppression_for_entity(target.id)
-        logs.append(f"[Effects] {ed.name} attached to {target.name} ({dur_type}{f' {rem_rounds} rounds' if rem_rounds is not None else ''})")
+
+        msg = f"[Effects] {ed.name} attached ({dur_type}{f' {rem_rounds} rounds' if rem_rounds is not None else ''})"
+        logs.append(msg)
+        trace.add(msg)
+
+        # After resolved stats and diffs + (optional) per-path stacking explain
+        after_stats = self.modifiers.resolved_stats(target) if self.modifiers else None
+        if before_stats and after_stats:
+            trace.extend(self.modifiers.diff_stats(before_stats, after_stats))
+            # Optional: explain key paths that changed
+            key_paths = ["ac.natural","ac.deflection","ac.dodge","attack.melee.bonus","attack.ranged.bonus","save.fort","save.ref","save.will","speed.land"]
+            trace.extend(self.modifiers.explain_paths(target, key_paths))
+
+        self.state.last_trace = trace.dump()
         return logs
 
     def detach(self, instance_id: str, target: Entity) -> bool:

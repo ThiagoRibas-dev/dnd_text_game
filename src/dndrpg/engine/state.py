@@ -10,6 +10,7 @@ from .zones_runtime import ZoneInstance
 
 class GameState(BaseModel):
     player: Entity
+    npcs: List[Entity] = Field(default_factory=list)
     log: list[str] = Field(default_factory=list)
     active_effects: Dict[str, List[EffectInstance]] = Field(default_factory=dict)
     active_conditions: Dict[str, List[ConditionInstance]] = Field(default_factory=dict)  # NEW
@@ -17,6 +18,7 @@ class GameState(BaseModel):
     # NEW: resource storage: map owner key -> list of ResourceState
     resources: Dict[str, List[ResourceState]] = Field(default_factory=dict)
     active_zones: Dict[str, List[ZoneInstance]] = Field(default_factory=dict)  # owner_entity_id -> zones
+    last_trace: list[str] = Field(default_factory=list)
     seed: int = Field(default_factory=lambda: random.randint(0, 2**32 - 1))
     rng_state: tuple = Field(default_factory=lambda: random.getstate())
 
@@ -71,8 +73,22 @@ def default_cleric_lvl1(content: ContentIndex) -> Entity:
     )
     return ent
 
+def default_goblin(content: ContentIndex) -> Entity:
+    abilities = Abilities(
+        str_=AbilityScore(base=11), dex=AbilityScore(base=13), con=AbilityScore(base=12),
+        int_=AbilityScore(base=10), wis=AbilityScore(base=9), cha=AbilityScore(base=6),
+    )
+    ent = Entity(
+        id="npc.goblin.1", name="Goblin", level=1, size=Size.SMALL, abilities=abilities,
+        base_attack_bonus=1, base_fort=2, base_ref=0, base_will=0,
+        hp_max=6, hp_current=6, speed_land=30,
+        natural_armor=1,
+        hd=1
+    )
+    return ent
+
 def default_state(content: ContentIndex) -> GameState:
-    game_state = GameState(player=default_cleric_lvl1(content))
+    game_state = GameState(player=default_cleric_lvl1(content), npcs=[default_goblin(content)])
     random.seed(game_state.seed)
     game_state.update_rng_state()
     return game_state

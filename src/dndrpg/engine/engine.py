@@ -13,6 +13,7 @@ from .modifiers_runtime import ModifiersEngine
 from .rulehooks_runtime import RuleHooksRegistry
 from .damage_runtime import DamageEngine
 from .zones_runtime import ZoneEngine
+from .schema_models import EffectDefinition, Operation, Gates, AttackGate
 
 ENGINE_VERSION = "0.1.0"
 
@@ -60,6 +61,7 @@ class GameEngine:
         # rebind effects in hooks
         self.hooks.effects = self.effects
         self.slot_id: str | None = None
+        self.should_quit: bool = False
 
     # — New Game flow helpers —
     def build_entity_lvl1(self, name: str, race: str, cls: str, abilities: dict[str, int], kit_ids: list[str]) -> Entity:
@@ -126,11 +128,44 @@ class GameEngine:
         save_game(self.slot_id, self.campaign.id, ENGINE_VERSION, self.state, description=self.state.player.name)
         return ["Game saved."]
 
+    def attack(self, actor: Entity, target: Entity) -> list[str]:
+        logs: list[str] = []
+        weapon = actor.equipped_main_weapon()
+        if not weapon:
+            logs.append(f"{actor.name} is not wielding a weapon.")
+            return logs
+
+        # Create a temporary effect definition for the attack
+        attack_effect = EffectDefinition(
+            id="attack.runtime.weapon",
+            name=f"Attack with {weapon.name}",
+            abilityType="Ex",
+            gates=Gates(attack=AttackGate(type="melee")),
+            operations=[
+                Operation(
+                    op="damage",
+                    amount=weapon.damage,
+                    damage_type=weapon.damage_type,
+                )
+            ]
+        )
+
+        # Temporarily add it to content
+        self.content.effects[attack_effect.id] = attack_effect
+
+        # Call attach
+        logs.extend(self.effects.attach(attack_effect.id, actor, target))
+
+        # Remove from content
+        del self.content.effects[attack_effect.id]
+
+        return logs
+
     def execute(self, cmd: str) -> list[str]:
         c = cmd.lower().strip()
         out: list[str] = []
         if c in ("help","?"):
-            out.append("Commands: status, inventory, resources, conditions, list effects, cast <effect_id>, next (advance 1 round)")
+            out.append("Commands: status, inventory, resources, conditions, list effects, cast <effect_id>, next (advance 1 round), attack <target>, quit")
         elif c == "expr stats":
             out.append(expr_cache_info())
         elif c == "conditions":
@@ -177,6 +212,22 @@ class GameEngine:
                 out.append("Usage: cast <effect_id> (e.g., cast spell.divine_power)")
             else:
                 out += self.effects.attach(eff_id, self.state.player, self.state.player)
+        elif c.startswith("attack "):
+            _, _, target_name = cmd.partition(" ")
+            target_name = target_name.strip()
+            if not target_name:
+                out.append("Who do you want to attack? (e.g., attack goblin)")
+            else:
+                target = None
+                for npc in self.state.npcs:
+                    if npc.name.lower().startswith(target_name.lower()):
+                        target = npc
+                        break
+                
+                if not target:
+                    out.append(f"Target not found: {target_name}")
+                else:
+                    out.extend(self.attack(self.state.player, target))
         elif c.startswith("rest"):
             out.append("You rest. (stub)")
         elif c.startswith("travel"):
@@ -190,6 +241,14 @@ class GameEngine:
             else:
                 for k, v in info.items():
                     out.append(f"{k}: {v}")
+        elif c.startswith("explain"):
+            if not self.state.last_trace:
+                out.append("(no trace recorded)")
+            else:
+                out.extend(self.state.last_trace)
+        elif c in ("quit", "exit"):
+            self.should_quit = True
+            out.append("Exiting...")
         else:
             out.append(f"Unknown command: {cmd}")
         return out
