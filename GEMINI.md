@@ -169,7 +169,7 @@ Acceptance: Can load a player, stats compute correctly, content files validate, 
 M2 — Effects/State engine (definitions → instances)
 - [x] EffectDefinition/EffectInstance implemented (blueprint vs runtime)
 - [x] ResourceDefinition/ResourceState implemented (capacity formulas, refresh cadence)
-- [ ] ConditionDefinition/ConditionInstance implemented
+- [x] ConditionDefinition/ConditionInstance implemented
 - [ ] Modifiers engine with stacking rules:
   - [ ] Typed bonuses (enhancement, morale, luck, insight, competence, sacred, profane, resistance, deflection, dodge, size, natural armor)
   - [ ] Unnamed bonuses + same-sourceKey non-stacking

@@ -7,7 +7,7 @@ import yaml
 from pydantic import TypeAdapter, Field as PField
 from .models import Item, Weapon, Armor, Shield
 from .campaigns import CampaignDefinition, StartingKit
-from .schema_models import EffectDefinition, ResourceDefinition  # blueprint
+from .schema_models import EffectDefinition, ResourceDefinition, ConditionDefinition
 
 ItemUnion = Annotated[Union[Weapon, Armor, Shield, Item], PField(discriminator="type")]
 ItemAdapter = TypeAdapter(ItemUnion)
@@ -15,6 +15,7 @@ CampaignAdapter = TypeAdapter(CampaignDefinition)
 KitAdapter = TypeAdapter(StartingKit)
 EffectAdapter = TypeAdapter(EffectDefinition)
 ResourceAdapter = TypeAdapter(ResourceDefinition)
+ConditionAdapter = TypeAdapter(ConditionDefinition)
 
 def _load_file(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
@@ -38,7 +39,8 @@ class ContentIndex:
     campaigns: Dict[str, CampaignDefinition]
     kits: Dict[str, StartingKit]
     effects: Dict[str, EffectDefinition]
-    resources: Dict[str, ResourceDefinition]  # NEW
+    resources: Dict[str, ResourceDefinition]
+    conditions: Dict[str, ConditionDefinition]   # NEW
 
     def get_item(self, iid: str) -> Item:
         return self.items_by_id[iid]
@@ -51,6 +53,7 @@ class ContentIndex:
 
     def get_resource(self, rid: str) -> ResourceDefinition:
         return self.resources[rid]
+    def get_condition(self, cid: str) -> ConditionDefinition: return self.conditions[cid]  # NEW
 
 def load_content(base_dir: Path) -> ContentIndex:
     items_by_id: Dict[str, Item] = {}
@@ -107,7 +110,16 @@ def load_content(base_dir: Path) -> ContentIndex:
             raise RuntimeError(f"Duplicate resource id {res.id} in {fp}")
         resources[res.id] = res
 
+    conditions: Dict[str, ConditionDefinition] = {}
+    for fp in _iter_files(base_dir / "conditions"):
+        data = _load_file(fp)
+        cond = ConditionAdapter.validate_python(data)
+        if cond.id in conditions:
+            raise RuntimeError(f"Duplicate condition id {cond.id} in {fp}")
+        conditions[cond.id] = cond
+
     return ContentIndex(
         items_by_id=items_by_id, weapons=weapons, armors=armors, shields=shields,
-        campaigns=campaigns, kits=kits, effects=effects, resources=resources
+        campaigns=campaigns, kits=kits, effects=effects, resources=resources,
+        conditions=conditions
     )

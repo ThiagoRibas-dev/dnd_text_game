@@ -1,0 +1,13 @@
+schema_version: 1
+id: spell.test_stun
+name: Test Stun
+source: spell
+abilityType: Spell
+activation: { action: standard }
+range: { type: personal }
+duration: { type: instantaneous }
+gates: { sr: { applies: false } }
+operations:
+  - op: condition.apply
+    id: cond.stunned
+    duration: { type: rounds, value: 2 }

@@ -7,6 +7,7 @@ from .expr import eval_for_actor
 from .models import Entity
 from .loader import ContentIndex
 from dndrpg.engine.resources_runtime import ResourceEngine
+from dndrpg.engine.conditions_runtime import ConditionsEngine
 
 if TYPE_CHECKING:
     from .state import GameState
@@ -38,10 +39,11 @@ class EffectsEngine:
     Gates/saves/attacks, modifiers, and operations execution will be wired in subsequent M2 steps.
     """
 
-    def __init__(self, content: ContentIndex, state: "GameState", resources: ResourceEngine | None = None):
+    def __init__(self, content: ContentIndex, state: "GameState", resources: ResourceEngine | None = None, conditions: ConditionsEngine | None = None):
         self.content = content
         self.state = state
         self.resources = resources or ResourceEngine(content, state)
+        self.conditions = conditions or ConditionsEngine(content, state)  # NEW
 
     def _snapshot_duration_rounds(self, ed: EffectDefinition, source: Entity, target: Entity) -> tuple[str, Optional[int]]:
         # Returns (duration_type, remaining_rounds)
@@ -104,6 +106,16 @@ class EffectsEngine:
                 if rid and cur is not None:
                     val = eval_for_actor(str(cur), source) if not isinstance(cur, (int,)) else cur
                     self.resources.set_current(target.id, rid, int(val))
+            elif opname == "condition.apply":
+                cid = getattr(op, "id", None)
+                dur = getattr(op, "duration", None)
+                stacks = getattr(op, "stacks", None)
+                if cid:
+                    logs += self.conditions.apply(cid, source, target, duration_override=dur, stacks=stacks, params=getattr(op, "params", None))
+            elif opname == "condition.remove":
+                cid = getattr(op, "id", None)
+                if cid:
+                    logs += self.conditions.remove(cond_id=cid, target=target)
 
     def attach(self, effect_id: str, source: Entity, target: Entity) -> list[str]:
         logs: list[str] = []

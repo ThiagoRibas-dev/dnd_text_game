@@ -5,11 +5,13 @@ from .models import Entity, Abilities, AbilityScore, Size, Item
 from .loader import ContentIndex
 from .effects_runtime import EffectInstance
 from .resources_runtime import ResourceState
+from .conditions_runtime import ConditionInstance  # NEW
 
 class GameState(BaseModel):
     player: Entity
     log: list[str] = Field(default_factory=list)
     active_effects: Dict[str, List[EffectInstance]] = Field(default_factory=dict)
+    active_conditions: Dict[str, List[ConditionInstance]] = Field(default_factory=dict)  # NEW
     round_counter: int = 0
     # NEW: resource storage: map owner key -> list of ResourceState
     resources: Dict[str, List[ResourceState]] = Field(default_factory=dict)

@@ -6,6 +6,7 @@ from .models import Entity, Abilities, AbilityScore, Size
 from .save import save_game, load_game, list_saves, latest_save
 from .effects_runtime import EffectsEngine
 from .resources_runtime import ResourceEngine
+from .conditions_runtime import ConditionsEngine
 
 ENGINE_VERSION = "0.1.0"
 
@@ -36,7 +37,8 @@ class GameEngine:
         self.campaign: CampaignDefinition | None = None
         self.state: GameState = default_state(self.content)
         self.resources = ResourceEngine(self.content, self.state)
-        self.effects = EffectsEngine(self.content, self.state, self.resources)
+        self.conditions = ConditionsEngine(self.content, self.state)
+        self.effects = EffectsEngine(self.content, self.state, self.resources, self.conditions)
         self.slot_id: str | None = None
 
     # — New Game flow helpers —
@@ -108,7 +110,20 @@ class GameEngine:
         c = cmd.lower().strip()
         out: list[str] = []
         if c in ("help","?"):
-            out.append("Commands: status, inventory, cast <effect_id>, list effects, rest 8h, travel <dir> <minutes>")
+            out.append("Commands: status, inventory, resources, conditions, list effects, cast <effect_id>, next (advance 1 round)")
+        elif c == "conditions":
+            lst = self.conditions.list_for_entity(self.state.player.id)
+            if not lst:
+                out.append("No active conditions.")
+            else:
+                for inst in lst:
+                    dr = inst.duration_type
+                    if inst.remaining_rounds is not None:
+                        dr += f" {inst.remaining_rounds} rounds"
+                    out.append(f"- {inst.name} [{dr}]")
+        elif c == "next":
+            out += self.conditions.tick_round()
+            # (Optional) also tick per-round resource refresh or effect durations later
         elif c.startswith("status"):
             p = self.state.player
             out.append(f"{p.name} | HP {p.hp_current}/{p.hp_max} AC {p.ac_total} (T{p.ac_touch}/FF{p.ac_ff}) | Melee +{p.attack_melee_bonus}")
