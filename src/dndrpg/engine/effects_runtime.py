@@ -6,7 +6,6 @@ from .schema_models import EffectDefinition, DurationSpec
 from .expr import eval_for_actor
 from .models import Entity
 from .loader import ContentIndex
-from .state import GameState # NEW
 
 class EffectInstance(BaseModel):
     instance_id: str = Field(default_factory=lambda: uuid4().hex)
