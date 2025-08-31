@@ -1,11 +1,16 @@
 import random
 from pydantic import BaseModel, Field
+from typing import Dict, List
 from .models import Entity, Abilities, AbilityScore, Size, Item
 from .loader import ContentIndex
+from .effects_runtime import EffectInstance # NEW: moved to top
 
 class GameState(BaseModel):
     player: Entity
     log: list[str] = Field(default_factory=list)
+    # NEW: runtime effects and a simple round counter
+    active_effects: Dict[str, List["EffectInstance"]] = Field(default_factory=dict)
+    round_counter: int = 0
     seed: int = Field(default_factory=lambda: random.randint(0, 2**32 - 1))
     rng_state: tuple = Field(default_factory=lambda: random.getstate())
 
@@ -49,3 +54,5 @@ def default_state(content: ContentIndex) -> GameState:
     random.seed(game_state.seed)
     game_state.update_rng_state()
     return game_state
+
+GameState.model_rebuild()

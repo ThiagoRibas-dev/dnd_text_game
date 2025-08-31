@@ -4,6 +4,7 @@ from .loader import load_content, ContentIndex
 from .campaigns import CampaignDefinition
 from .models import Entity, Abilities, AbilityScore, Size
 from .save import save_game, load_game, list_saves, latest_save
+from .effects_runtime import EffectsEngine
 
 ENGINE_VERSION = "0.1.0"
 
@@ -32,7 +33,8 @@ class GameEngine:
         self.content_dir = content_dir()
         self.content: ContentIndex = load_content(self.content_dir)
         self.campaign: CampaignDefinition | None = None
-        self.state: GameState = default_state(self.content)  # placeholder until New Game
+        self.state: GameState = default_state(self.content)
+        self.effects = EffectsEngine(self.content, self.state)  # NEW
         self.slot_id: str | None = None
 
     # — New Game flow helpers —
@@ -104,19 +106,30 @@ class GameEngine:
         c = cmd.lower().strip()
         out: list[str] = []
         if c in ("help","?"):
-            out.append("Commands: status, inventory, attack <target>, cast <spell>, rest 8h, travel <dir> <minutes>")
+            out.append("Commands: status, inventory, cast <effect_id>, list effects, rest 8h, travel <dir> <minutes>")
         elif c.startswith("status"):
             p = self.state.player
             out.append(f"{p.name} | HP {p.hp_current}/{p.hp_max} AC {p.ac_total} (T{p.ac_touch}/FF{p.ac_ff}) | Melee +{p.attack_melee_bonus}")
         elif c.startswith("inventory"):
             names = [it.name for it in self.state.player.inventory]
             out.append("Inventory: " + (", ".join(names) if names else "(empty)"))
-        elif c.startswith("attack"):
-            out.append("You attack the goblin. (stub) Roll to hit, apply DR/resist, etc.")
-        elif c.startswith("cast divine power"):
-            out.append("You cast Divine Power. (stub)")
-        elif c.startswith("cast grease"):
-            out.append("You cast Grease (10-ft square). (stub)")
+        elif c.startswith("list effects"):
+            lst = self.effects.list_for_entity(self.state.player.id)
+            if not lst:
+                out.append("No active effects.")
+            else:
+                for inst in lst:
+                    dr = f"{inst.duration_type}"
+                    if inst.remaining_rounds is not None:
+                        dr += f" {inst.remaining_rounds} rounds"
+                    out.append(f"- {inst.name} [{dr}] (id={inst.instance_id})")
+        elif c.startswith("cast "):
+            _, _, eff_id = cmd.partition(" ")
+            eff_id = eff_id.strip()
+            if not eff_id:
+                out.append("Usage: cast <effect_id> (e.g., cast spell.divine_power)")
+            else:
+                out += self.effects.attach(eff_id, self.state.player, self.state.player)
         elif c.startswith("rest"):
             out.append("You rest. (stub)")
         elif c.startswith("travel"):

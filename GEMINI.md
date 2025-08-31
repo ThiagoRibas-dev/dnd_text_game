@@ -165,7 +165,7 @@ M1 — Project foundation and core models
 Acceptance: Can load a player, stats compute correctly, content files validate, and tests run green.
 
 M2 — Effects/State engine (definitions → instances)
-- [ ] EffectDefinition/EffectInstance implemented (blueprint vs runtime)
+- [x] EffectDefinition/EffectInstance implemented (blueprint vs runtime)
 - [ ] ResourceDefinition/ResourceState implemented (capacity formulas, refresh cadence)
 - [ ] ConditionDefinition/ConditionInstance implemented
 - [ ] Modifiers engine with stacking rules:

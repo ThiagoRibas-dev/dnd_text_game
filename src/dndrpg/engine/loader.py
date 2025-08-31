@@ -7,11 +7,13 @@ import yaml
 from pydantic import TypeAdapter, Field as PField
 from .models import Item, Weapon, Armor, Shield
 from .campaigns import CampaignDefinition, StartingKit
+from .schema_models import EffectDefinition  # blueprint
 
 ItemUnion = Annotated[Union[Weapon, Armor, Shield, Item], PField(discriminator="type")]
 ItemAdapter = TypeAdapter(ItemUnion)
 CampaignAdapter = TypeAdapter(CampaignDefinition)
 KitAdapter = TypeAdapter(StartingKit)
+EffectAdapter = TypeAdapter(EffectDefinition)
 
 def _load_file(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
@@ -34,12 +36,16 @@ class ContentIndex:
     shields: Dict[str, Shield]
     campaigns: Dict[str, CampaignDefinition]
     kits: Dict[str, StartingKit]
+    effects: Dict[str, EffectDefinition]   # NEW
 
     def get_item(self, iid: str) -> Item:
         return self.items_by_id[iid]
 
     def clone_item(self, iid: str) -> Item:
         return self.items_by_id[iid].model_copy(deep=True)
+
+    def get_effect(self, eid: str) -> EffectDefinition:  # NEW
+        return self.effects[eid]
 
 def load_content(base_dir: Path) -> ContentIndex:
     items_by_id: Dict[str, Item] = {}
@@ -77,7 +83,17 @@ def load_content(base_dir: Path) -> ContentIndex:
             raise RuntimeError(f"Duplicate kit id {kit.id} in {fp}")
         kits[kit.id] = kit
 
+    # Load effects
+    effects: Dict[str, EffectDefinition] = {}
+    effects_dir = base_dir / "effects"
+    for fp in _iter_files(effects_dir):
+        data = _load_file(fp)
+        eff = EffectAdapter.validate_python(data)
+        if eff.id in effects:
+            raise RuntimeError(f"Duplicate effect id {eff.id} in {fp}")
+        effects[eff.id] = eff
+
     return ContentIndex(
         items_by_id=items_by_id, weapons=weapons, armors=armors, shields=shields,
-        campaigns=campaigns, kits=kits
+        campaigns=campaigns, kits=kits, effects=effects
     )
