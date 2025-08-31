@@ -99,7 +99,7 @@ class ResourceEngine:
             owner_scope=scope,
             owner_entity_id=owner_entity_id if scope == "entity" else None,
             owner_effect_instance_id=owner_effect_instance_id if scope == "effect-instance" else None,
-            capacity_computeAt=rd.capacity.get("computeAt", "attach"),  # type: ignore
+            capacity_computeAt=rd.capacity.computeAt,
             freezeOnAttach=bool(rd.freezeOnAttach),
             refresh=rd.refresh,
             absorption=rd.absorption,

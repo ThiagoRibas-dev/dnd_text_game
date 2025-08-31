@@ -25,88 +25,72 @@ def _register_functions(context: dict[str, Any]) -> None:
     target: Optional[Entity] = context.get("target")
 
     # ——— Core helpers ———
+    # ——— Core helpers ———
     _parser.functions["min"] = min
-    _parser.functions["max"] = max
+    _parser.functions["max"]
 
     # Ensure floor/ceil are present (py-expression-eval has them, but be explicit)
     import math
     _parser.functions.update({"floor": math.floor, "ceil": math.ceil})
 
-    # ——— D&D functions ———
-
-    def ability_mod_func(name: Any, who: str = "actor") -> int:
-        ent = actor if who == "actor" else target
-        if not isinstance(ent, Entity):
-            return 0
-        ab = _ability_name(name)
-        sc = ent.abilities.get(ab).mod()
-        return sc
-
-    def level_func(who: str = "actor") -> int:
-        ent = actor if who == "actor" else target
-        return int(getattr(ent, "level", 0) or 0) if isinstance(ent, Entity) else 0
-
-    def class_level_func(cls_name: Any, who: str = "actor") -> int:
-        ent = actor if who == "actor" else target
-        if not isinstance(ent, Entity):
-            return 0
-        key = str(cls_name).lower()
-        return int(ent.classes.get(key, 0))
-
-    def caster_level_func(key: Any | None = None, who: str = "actor") -> int:
-        """
-        caster_level() with no key returns a generic CL:
-          - If caster_levels map exists and non-empty: highest CL in map
-          - Else fallback to level
-        caster_level("cleric") returns the class-specific CL if present, else 0
-        """
-        ent = actor if who == "actor" else target
-        if not isinstance(ent, Entity):
-            return 0
-        if key is None:
-            if ent.caster_levels:
-                return int(max(ent.caster_levels.values()))
-            return int(getattr(ent, "level", 0) or 0)
-        k = str(key).lower()
-        return int(ent.caster_levels.get(k, 0))
-
-    def initiator_level_func(who: str = "actor") -> int:
-        """
-        Minimal IL approximation:
-          - If the entity has 'initiator_level' attribute in extra context, return it
-          - Else if classes exist: IL = sum(adept classes) + floor(sum(other classes) / 2)
-          - Else fallback to level
-        Adept classes: crusader, warblade, swordsage
-        """
-        ent = actor if who == "actor" else target
-        if not isinstance(ent, Entity):
-            return 0
-        # If context provided an explicit IL, prefer it
+    # ——— D&D values (pre-evaluated for convenience) ———
+    if actor:
+        context["level"] = int(getattr(actor, "level", 0) or 0)
+        context["hd"] = int(getattr(actor, "hd", None) or getattr(actor, "level", 0) or 0)
+        # Add ability scores as variables (e.g., str, dex, con)
+        for ab_name_key, _ in actor.abilities.model_fields.items():
+            ab_score = getattr(actor.abilities, ab_name_key)
+            ab_name = ab_name_key.replace("_", "") # remove trailing underscore from str_ and int_
+            context[ab_name] = ab_score.score()
+            context[f"{ab_name}_mod"] = ab_score.mod()
+        # Add class levels as variables (e.g., fighter_level, cleric_level)
+        for cls_name, cls_level in actor.classes.items():
+            context[f"{cls_name.lower()}_level"] = cls_level
+        # Add caster levels
+        if actor.caster_levels:
+            for cl_name, cl_val in actor.caster_levels.items():
+                context[f"{cl_name.lower()}_cl"] = cl_val
+            context["caster_level"] = int(max(actor.caster_levels.values()))
+        else:
+            context["caster_level"] = context["level"] # fallback
+        # Initiator level
         il_override = context.get("initiator_level_override")
         if isinstance(il_override, int):
-            return il_override
-        if ent.classes:
+            context["initiator_level"] = il_override
+        elif actor.classes:
             adepts = {"crusader", "warblade", "swordsage"}
-            adept_levels = sum(v for k, v in ent.classes.items() if k in adepts)
-            non_adept_levels = sum(v for k, v in ent.classes.items() if k not in adepts)
-            return int(adept_levels + (non_adept_levels // 2))
-        return int(getattr(ent, "level", 0) or 0)
+            adept_levels = sum(v for k, v in actor.classes.items() if k in adepts)
+            non_adept_levels = sum(v for k, v in actor.classes.items() if k not in adepts)
+            context["initiator_level"] = int(adept_levels + (non_adept_levels // 2))
+        else:
+            context["initiator_level"] = context["level"]
 
-    def hd_func(who: str = "actor") -> int:
-        ent = actor if who == "actor" else target
-        if not isinstance(ent, Entity):
-            return 0
-        # If entity has explicit hd, use it, else fallback to level
-        return int(getattr(ent, "hd", None) or getattr(ent, "level", 0) or 0)
-
-    _parser.functions.update({
-        "ability_mod": ability_mod_func,
-        "level": level_func,
-        "class_level": class_level_func,
-        "caster_level": caster_level_func,
-        "initiator_level": initiator_level_func,
-        "hd": hd_func
-    })
+    if target:
+        context["target_level"] = int(getattr(target, "level", 0) or 0)
+        context["target_hd"] = int(getattr(target, "hd", None) or getattr(target, "level", 0) or 0)
+        for ab_name_key, _ in target.abilities.model_fields.items():
+            ab_score = getattr(target.abilities, ab_name_key)
+            ab_name = ab_name_key.replace("_", "") # remove trailing underscore from str_ and int_
+            context[f"target_{ab_name}"] = ab_score.score()
+            context[f"target_{ab_name}_mod"] = ab_score.mod()
+        for cls_name, cls_level in target.classes.items():
+            context[f"target_{cls_name.lower()}_level"] = cls_level
+        if target.caster_levels:
+            for cl_name, cl_val in target.caster_levels.items():
+                context[f"target_{cl_name.lower()}_cl"] = cl_val
+            context["target_caster_level"] = int(max(target.caster_levels.values()))
+        else:
+            context["target_caster_level"] = context["target_level"]
+        il_override = context.get("target_initiator_level_override")
+        if isinstance(il_override, int):
+            context["target_initiator_level"] = il_override
+        elif target.classes:
+            adepts = {"crusader", "warblade", "swordsage"}
+            adept_levels = sum(v for k, v in target.classes.items() if k in adepts)
+            non_adept_levels = sum(v for k, v in target.classes.items() if k not in adepts)
+            context["target_initiator_level"] = int(adept_levels + (non_adept_levels // 2))
+        else:
+            context["target_initiator_level"] = context["target_level"]
 
 def make_env(actor: Optional[Entity] = None,
              target: Optional[Entity] = None,
