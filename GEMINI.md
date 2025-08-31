@@ -22,8 +22,7 @@ A central "Mode Manager" handles transitions between these states. The game will
   - Iteration
   - Request and wait for permission to Execute/Implement
   - Execution/implementation (reading files, creating/editing/deleting, etc)
-  - Run ruff
-  - If errors are found, go back to the Examination Phase
+  - Run ruff then run the game
   - Update Roadmap (GEMINI.md file)
   - Summarize changes
   - Ask for next step
@@ -189,9 +188,9 @@ M2 — Effects/State engine (definitions → instances)
 - [x] Rule hooks registry (incoming.effect, on.attack pre/post, on.save pre/post, scheduler ticks, incoming.damage)
 - [x] Operations: damage/heal (HP/nonlethal/ability dmg/drain), apply/remove condition, (create/spend/restore) resource, attach/detach effects, create zone
 - [x] Antimagic/suppression flags per abilityType (Ex/Su/Sp/Spell)
-- [ ] Expression compilation cache
-  - [ ] Precompile expressions to AST on load; cache by string
-  - [ ] Benchmark: ensure eval hot paths (damage, saves) avoid re-parsing
+- [x] Expression compilation cache
+  - [x] Precompile expressions to AST on load; cache by string
+  - [x] Benchmark: ensure eval hot paths (damage, saves) avoid re-parsing
 - [ ] TargetPath registry
   - [ ] Central registry with metadata (type, allowed ops, requires bonusType?) used by schema and runtime checks
 
@@ -380,11 +379,12 @@ Testing & QA (continuous across milestones)
   - [ ] Travel hour: light burn, random encounter, stealth vs perception → surprise
   - [ ] Craft 2 weeks (take 10): progress & completion
 
-Post-1.0 nice-to-haves (backlog)
+## Post-1.0 nice-to-haves (backlog)
 - Map rendering (mini ASCII map) and fog of war
 - Advanced combat maneuvers (trip, grapple, disarm, bull rush)
 - Concentration checks and casting defensively
-- More spells and ToB disciplines; more Incarnum soulmelds
+- More spells and ToB disciplines; more Incarnum soulmelds; Binding; Shadowcasting; Truenaming; Invocations; Auras (Dragon Shaman and Marshal)
 - NPC dialog scaffolding and quest/task chains
-- Discord bot interface; web UI (reusing engine)
+- World State
 - Mod manager for content packs
+- AI Integration

@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Any
 from .schema_models import Modifier
 from .loader import ContentIndex
 from .models import Entity
-from .expr import eval_expr, make_env
+from .expr import eval_expr
 from .state import GameState
 
 # Typed bonus stacking policy
@@ -55,9 +55,8 @@ class ModifiersEngine:
                 continue
             src = self._entity_by_id(inst.source_entity_id) or self._entity_by_id(entity_id)  # fallback
             tgt = self._entity_by_id(entity_id)
-            env = make_env(actor=src, target=tgt, extra={})
             for m in (ed.modifiers or []):
-                em = self._eval_modifier(m, env, source_kind="effect", source_id=ed.id, source_name=ed.name)
+                em = self._eval_modifier(m, actor=src, target=tgt, source_kind="effect", source_id=ed.id, source_name=ed.name)
                 if em:
                     out.setdefault(m.targetPath, []).append(em)
         # Conditions
@@ -67,24 +66,23 @@ class ModifiersEngine:
                 continue
             src = self._entity_by_id(inst.source_entity_id) or self._entity_by_id(entity_id)
             tgt = self._entity_by_id(entity_id)
-            env = make_env(actor=src, target=tgt, extra={})
             for m in (cd.modifiers or []):
-                em = self._eval_modifier(m, env, source_kind="condition", source_id=cd.id, source_name=cd.name)
+                em = self._eval_modifier(m, actor=src, target=tgt, source_kind="condition", source_id=cd.id, source_name=cd.name)
                 if em:
                     out.setdefault(m.targetPath, []).append(em)
         return out
 
-    def _eval_modifier(self, m: Modifier, env: dict, *, source_kind: str, source_id: str, source_name: str) -> Optional[EvaluatedMod]:
+    def _eval_modifier(self, m: Modifier, *, actor: Optional[Entity], target: Optional[Entity], source_kind: str, source_id: str, source_name: str) -> Optional[EvaluatedMod]:
         # value can be numeric or expr (string/dict -> expr string)
         val_raw = m.value
         try:
             if isinstance(val_raw, (int, float)):
                 val = float(val_raw)
             elif isinstance(val_raw, str):
-                v = eval_expr(val_raw, env)
+                v = eval_expr(val_raw, actor=actor, target=target)
                 val = float(v) if isinstance(v, (int, float)) else 0.0
             elif isinstance(val_raw, dict) and "expr" in val_raw:
-                v = eval_expr(str(val_raw["expr"]), env)
+                v = eval_expr(str(val_raw["expr"]), actor=actor, target=target)
                 val = float(v) if isinstance(v, (int, float)) else 0.0
             else:
                 # allow dict or other shapes in future; default 0

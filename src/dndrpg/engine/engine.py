@@ -1,5 +1,6 @@
 from ..util.paths import content_dir
 from .state import GameState, default_state
+from .expr import expr_cache_info
 from .loader import load_content, ContentIndex
 from .campaigns import CampaignDefinition
 from .models import Entity, Abilities, AbilityScore, Size
@@ -125,6 +126,8 @@ class GameEngine:
         out: list[str] = []
         if c in ("help","?"):
             out.append("Commands: status, inventory, resources, conditions, list effects, cast <effect_id>, next (advance 1 round)")
+        elif c == "expr stats":
+            out.append(expr_cache_info())
         elif c == "conditions":
             lst = self.conditions.list_for_entity(self.state.player.id)
             if not lst:
