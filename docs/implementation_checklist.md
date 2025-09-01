@@ -172,7 +172,7 @@ Feature 4: Feat Selection + Prerequisites + Choices
                 inst.variables.update({f"choice.{k}": v for k, v in bound_choices.items()})
             # ...
     ```
-4.3. Implement StepFeats UI in src/dndrpg/ui/chargen.py: Partially Implemented. (UI for displaying feats, prerequisites, and choices is present, but final prerequisite validation is pending.)
+4.3. Implement StepFeats UI in src/dndrpg/ui/chargen.py: Completed. (UI for displaying feats, prerequisites, and choices is present, with final prerequisite validation.)
 4.4. Route Flow to StepFeats: Completed.
 
 Feature 5: Spells Selection and Resources
