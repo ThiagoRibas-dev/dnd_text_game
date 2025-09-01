@@ -1,0 +1,1 @@
+start Powershell.exe -executionpolicy bypass -File .\list_dirs_and_files.ps1
