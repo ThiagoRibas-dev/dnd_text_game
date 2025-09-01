@@ -31,13 +31,13 @@ Always ponder and consider the possible downstream effects of changes.
 
 **Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why). Only once the plan has been accepted, we will execute the plan and edit the files in question.
 
-**Editing Files:** Avoid trying to edit whole files at once. Edit specific, directed snippets at a time, always planning the chain of edits.
+**Editing Files:** Avoid trying to edit whole files at once if possible. Edit specific, directed, targeted snippets at a time, always planning the whole chain of edits beforehand. Be aware of replacing snippets that exist in multiple parts of a given file.
 
 **Ruff Linter:** During Execution, after performing a batch of changes, always run `ruff check . --fix` to ensure things are in order.
 
 **Running the Game:** Use the command `uv run python -m dndrpg`.
 
-**Tool error:** After trying to use a tool such as `new_string`, `replace`, etc, to interact with the repository, stop the attempts and ask the User for help, providing a summary of the attempted additions/changes.
+**Tool error:** After trying to use a tool such as `new_string`, `replace`, etc, to interact with the repository, stop the attempts and ask the User for help, providing the snippet to be added or changed manually.
 
 ---
 
@@ -99,7 +99,7 @@ M0 — Boot flow: Campaigns, Saves, Character Creation [x]
   - [x] Race (with subrace), alignment (gated by class), deity (optional), domains (for cleric)
   - [x] Class/level 1: class pick (Fighter/Cleric/Sorcerer/Monk; later Crusader/Totemist), HP rule (max at 1st), BAB/saves bases
   - [x] Skills: skill ranks allocation (auto-calc class/cross-class costs; human bonus; INT mod)
-  - [x] Feats: pick by level/race/class; prerequisites validation
+  - [ ] Feats: pick by level/race/class; prerequisites validation
   - [x] Spells:
     - [x] Cleric: pick domains; prepared spells (domain slots auto); spontaneous cure/inflict flag
     - [x] Sorcerer: spells known; per-day slots computed

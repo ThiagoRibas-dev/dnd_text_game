@@ -1,0 +1,10 @@
+id: domain.fire
+name: Fire Domain
+description: Gain fire-related abilities.
+abilityType: Ex
+type: Domain
+properties:
+  - type: bonus
+    target: spell_damage.fire
+    amount: 1
+    bonus_type: untyped

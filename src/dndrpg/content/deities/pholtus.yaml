@@ -1,0 +1,12 @@
+id: deity.pholtus
+name: Pholtus
+description: God of Light, Resolution, and Law.
+alignment: "lawful good"
+allowed_alignments:
+  - lawful good
+  - lawful neutral
+  - lawful evil
+domains:
+  - domain.fire
+  - domain.law
+  - domain.sun

@@ -7,7 +7,7 @@ import yaml
 from pydantic import TypeAdapter, Field as PField
 from .models import Item, Weapon, Armor, Shield
 from .campaigns import CampaignDefinition, StartingKit
-from .schema_models import EffectDefinition, ResourceDefinition, ConditionDefinition
+from .schema_models import EffectDefinition, ResourceDefinition, ConditionDefinition, DeityDefinition
 
 ItemUnion = Annotated[Union[Weapon, Armor, Shield, Item], PField(discriminator="type")]
 ItemAdapter = TypeAdapter(ItemUnion)
@@ -40,7 +40,8 @@ class ContentIndex:
     kits: Dict[str, StartingKit]
     effects: Dict[str, EffectDefinition]
     resources: Dict[str, ResourceDefinition]
-    conditions: Dict[str, ConditionDefinition]   # NEW
+    conditions: Dict[str, ConditionDefinition]
+    deities: Dict[str, DeityDefinition] # NEW
 
     def get_item(self, iid: str) -> Item:
         return self.items_by_id[iid]
@@ -53,7 +54,7 @@ class ContentIndex:
 
     def get_resource(self, rid: str) -> ResourceDefinition:
         return self.resources[rid]
-    def get_condition(self, cid: str) -> ConditionDefinition: return self.conditions[cid]  # NEW
+    def get_condition(self, cid: str) -> ConditionDefinition: return self.conditions[cid]
 
 def load_content(base_dir: Path) -> ContentIndex:
     items_by_id: Dict[str, Item] = {}
@@ -118,8 +119,17 @@ def load_content(base_dir: Path) -> ContentIndex:
             raise RuntimeError(f"Duplicate condition id {cond.id} in {fp}")
         conditions[cond.id] = cond
 
+    deities: Dict[str, DeityDefinition] = {}
+    DeityAdapter = TypeAdapter(DeityDefinition) # Define adapter here
+    for fp in _iter_files(base_dir / "deities"):
+        data = _load_file(fp)
+        deity = DeityAdapter.validate_python(data)
+        if deity.id in deities:
+            raise RuntimeError(f"Duplicate deity id {deity.id} in {fp}")
+        deities[deity.id] = deity
+
     return ContentIndex(
         items_by_id=items_by_id, weapons=weapons, armors=armors, shields=shields,
         campaigns=campaigns, kits=kits, effects=effects, resources=resources,
-        conditions=conditions
+        conditions=conditions, deities=deities
     )

@@ -151,14 +151,19 @@ class GatesEngine:
         if not hit:
             return AttackResult(True, False, False, default_crit_mult, ac_val, total, roll, False, f"Attack d20({roll}) + {atk_bonus} vs AC {ac_val} → miss")
 
-        # Threat/confirm (use 20 threat range default; use ×2 multiplier)
-        if roll == 20 or False:
+        thr = ag.threat_range or 20
+        cmult = ag.crit_mult or 2 # Default to 2 if not specified in AttackGate
+
+        # Threat if roll >= thr
+        if roll >= thr:
             # Confirm
             confirm_roll = d20(self.rng)
             confirm_total = confirm_roll + atk_bonus
             if confirm_total >= ac_val or confirm_roll == 20:
-                return AttackResult(True, True, True, default_crit_mult, ac_val, total, roll, False, f"Attack {roll}+{atk_bonus} vs AC {ac_val} → hit; crit confirm {confirm_roll}+{atk_bonus} → critical x{default_crit_mult}")
-        return AttackResult(True, True, False, default_crit_mult, ac_val, total, roll, False, f"Attack {roll}+{atk_bonus} vs AC {ac_val} → hit")
+                
+                return AttackResult(True, True, True, cmult, ac_val, total, roll, False,
+                                    f"Attack {roll}+{atk_bonus} vs AC {ac_val} → hit; crit confirm {confirm_roll}+{atk_bonus} → critical x{cmult}")
+        return AttackResult(True, True, False, cmult, ac_val, total, roll, False, f"Attack {roll}+{atk_bonus} vs AC {ac_val} → hit")
 
     # -------- Top-level evaluator --------
     def evaluate(self, ed: EffectDefinition, source: Entity, target: Entity) -> Tuple[GateOutcome, list[str]]:

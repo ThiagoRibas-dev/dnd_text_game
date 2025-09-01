@@ -18,6 +18,7 @@ from .trace import TraceSession
 if TYPE_CHECKING:
     from .state import GameState
     from dndrpg.engine.rulehooks_runtime import RuleHooksRegistry
+    from .scheduler import Scheduler
 
 class EffectInstance(BaseModel):
     instance_id: str = Field(default_factory=lambda: uuid4().hex)
@@ -53,7 +54,19 @@ class EffectsEngine:
                  damage: DamageEngine | None = None,
                  zones: ZoneEngine | None = None,
                  modifiers: ModifiersEngine | None = None,
-                 rng: Optional[random.Random] = None):
+                 rng: Optional[random.Random] = None,
+                 scheduler: "Scheduler" | None = None): # Add scheduler parameter
+        self.content = content
+        self.state = state
+        self.resources = resources or ResourceEngine(content, state)
+        self.conditions = conditions or ConditionsEngine(content, state)
+        self.hooks = hooks
+        self.damage = damage
+        self.zones = zones
+        self.modifiers = modifiers
+        self.rng = rng or random.Random()
+        self.gates = GatesEngine(self.modifiers, self.rng) if self.modifiers else None
+        self.scheduler = scheduler # Assign scheduler
         self.content = content
         self.state = state
         self.resources = resources or ResourceEngine(content, state)
@@ -141,7 +154,7 @@ class EffectsEngine:
             rem_rounds = int(base)
         return dur_type, rem_rounds
 
-    def attach(self, effect_id: str, source: Entity, target: Entity) -> list[str]:
+    def attach(self, effect_id: str, source: Entity, target: Entity, *, bound_choices: Optional[dict] = None) -> list[str]:
         trace = TraceSession()
         logs: list[str] = []
         if effect_id not in self.content.effects:
@@ -198,6 +211,8 @@ class EffectsEngine:
             source_entity_id=source.id, target_entity_id=target.id,
             duration_type=dur_type, remaining_rounds=rem_rounds, started_at_round=self.state.round_counter
         )
+        if bound_choices:
+            inst.variables.update({f"choice.{k}": v for k, v in bound_choices.items()})
 
         # Ops (with scaling/crit) → logs already from damage/resources/conditions
         op_logs = self.execute_operations(list(ed.operations or []), source, target,

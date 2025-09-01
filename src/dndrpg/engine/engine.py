@@ -14,6 +14,7 @@ from .rulehooks_runtime import RuleHooksRegistry
 from .damage_runtime import DamageEngine
 from .zones_runtime import ZoneEngine
 from .schema_models import EffectDefinition, Operation, Gates, AttackGate
+# from .scheduler import Scheduler # FIXME: Temporarily disabled
 from .settings import load_settings, Settings # Import settings
 
 ENGINE_VERSION = "0.1.0"
@@ -28,6 +29,7 @@ class GameEngine:
         self.conditions = ConditionsEngine(self.content, self.state)
         self.damage = DamageEngine(self.content, self.state)
         self.modifiers = ModifiersEngine(self.content, self.state)
+        # self.scheduler = Scheduler(self.state) # FIXME: Temporarily disabled
         self.hooks = RuleHooksRegistry(self.content, self.state, None, self.conditions, self.resources)  # temporary None; rebind below
         self.zones = ZoneEngine(self.content, self.state, self.hooks)
         self.settings: Settings = load_settings() # Load settings
@@ -42,6 +44,7 @@ class GameEngine:
                                      rng=self.rng)
         # rebind effects in hooks
         self.hooks.effects = self.effects
+        # self.effects.scheduler = self.scheduler # FIXME: Temporarily disabled
         self.slot_id: str | None = None
         self.should_quit: bool = False
 

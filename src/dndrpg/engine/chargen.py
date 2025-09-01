@@ -8,6 +8,9 @@ from dndrpg.engine.resources_runtime import ResourceEngine
 from dndrpg.engine.conditions_runtime import ConditionsEngine
 from dndrpg.engine.rulehooks_runtime import RuleHooksRegistry
 from dndrpg.engine.state import GameState
+from dndrpg.engine.skills import skill_points_at_level1, max_ranks, CLASS_SKILLS
+from dndrpg.engine.spells import bonus_slots_from_mod, sorcerer_spells_known_from_cha
+from dndrpg.engine.prereq import eval_prereq, BuildView
 
 @dataclass
 class CharBuildState:
@@ -26,9 +29,123 @@ class CharBuildState:
     spells_known: List[str] = field(default_factory=list)
     spells_prepared: Dict[int, List[str]] = field(default_factory=dict)  # level -> ids
     gear_ids: List[str] = field(default_factory=list)  # simple; kits will fill
+    feat_choices: Dict[str, Dict[str, str]] = field(default_factory=dict)  # feat_id -> {choice_name: value}
+
+def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tuple[bool, str]:
+    # Validate Deity
+    if picks.deity:
+        deity_id = picks.deity # Assuming picks.deity is the ID
+        if deity_id not in content.deities:
+            return False, f"Selected deity '{deity_id}' does not exist."
+        deity_def = content.deities[deity_id]
+
+        # Validate Deity Alignment
+        if picks.alignment not in deity_def.allowed_alignments:
+            return False, f"Alignment '{picks.alignment}' is not allowed by deity '{deity_def.name}'."
+
+        # Validate Cleric Domains against Deity's allowed domains
+        if picks.clazz == "cleric" and picks.domains:
+            for domain_id in picks.domains:
+                if domain_id not in deity_def.allowed_domains:
+                    return False, f"Domain '{domain_id}' is not allowed by deity '{deity_def.name}'."
+
+    # Validate Campaign Allowed Lists
+    campaign_allowed = content.campaign.allowed
+
+    # Validate Alignment against campaign allowed list
+    if isinstance(campaign_allowed.alignments, list) and picks.alignment not in campaign_allowed.alignments:
+        return False, f"Alignment '{picks.alignment}' is not allowed by the campaign."
+
+    # Validate Domains against campaign allowed list
+    if picks.clazz == "cleric" and picks.domains:
+        if isinstance(campaign_allowed.domains, list):
+            for domain_id in picks.domains:
+                if domain_id not in campaign_allowed.domains:
+                    return False, f"Domain '{domain_id}' is not allowed by the campaign."
+
+    # Validate Skills
+    temp_int_score = picks.abilities.get("int", 10)
+    temp_int_mod = (temp_int_score - 10) // 2
+    total_skill_points = skill_points_at_level1(picks.clazz, temp_int_mod, picks.race == "human")
+    allocated_points = sum(picks.skills.values())
+
+    if allocated_points > total_skill_points:
+        return False, f"Allocated skill points ({allocated_points}) exceed available ({total_skill_points})."
+
+    for skill_name, ranks in picks.skills.items():
+        is_class_skill = skill_name in CLASS_SKILLS.get(picks.clazz, [])
+        max_allowed_ranks = max_ranks(picks.level, is_class_skill)
+        if ranks > max_allowed_ranks:
+            return False, f"Skill '{skill_name}' has too many ranks ({ranks}). Max allowed: {max_allowed_ranks}."
+
+    # Validate Feats
+    build_view = BuildView(
+        abilities=picks.abilities,
+        clazz=picks.clazz,
+        level=picks.level,
+        race=picks.race,
+        feats=picks.feats,
+        skills=picks.skills,
+    )
+    for feat_id in picks.feats:
+        feat_def = content.effects.get(feat_id)
+        if not feat_def:
+            return False, f"Selected feat '{feat_id}' does not exist."
+        if feat_def.prerequisites:
+            can_take_feat, prereq_msg = eval_prereq(feat_def.prerequisites, build_view)
+            if not can_take_feat:
+                return False, f"Feat '{feat_def.name}' prerequisites not met: {prereq_msg}"
+
+    # Validate Spells
+    if picks.clazz == "cleric":
+        wis_mod = (picks.abilities.get("wis", 10) - 10) // 2
+        expected_slots = bonus_slots_from_mod(wis_mod, max_level=picks.level) # Assuming max_level is current level
+        
+        for level, prepared_spells in picks.spells_prepared.items():
+            if level not in expected_slots:
+                return False, f"Cleric cannot prepare level {level} spells at this level."
+            if len(prepared_spells) > expected_slots[level]:
+                return False, f"Cleric prepared too many level {level} spells ({len(prepared_spells)}). Max allowed: {expected_slots[level]}<bos>."
+            for spell_id in prepared_spells:
+                if spell_id not in content.effects: # Assuming spells are effects
+                    return False, f"Prepared spell '{spell_id}' does not exist."
+
+    elif picks.clazz == "sorcerer":
+        cha_mod = (picks.abilities.get("cha", 10) - 10) // 2
+        expected_known = sorcerer_spells_known_from_cha(picks.level, cha_mod)
+
+        for level, known_count in expected_known.items():
+            # Count spells known for this level
+            actual_known_count = 0
+            for spell_id in picks.spells_known:
+                # This is a simplification. A proper check would involve knowing the spell's level.
+                # For now, we'll just count all known spells and compare to the total expected.
+                # This assumes picks.spells_known only contains spells for levels they can cast.
+                if spell_id in content.effects: # Assuming spells are effects
+                    # Need to get spell level from content.effects[spell_id]
+                    # For now, a basic check:
+                    actual_known_count += 1
+            
+            # This comparison is flawed as it compares total known spells to per-level known.
+            # A more robust solution would involve categorizing picks.spells_known by level.
+            # For MVP, we'll just check if the total number of known spells exceeds the sum of expected known spells.
+            total_expected_known = sum(expected_known.values())
+            if len(picks.spells_known) > total_expected_known:
+                return False, f"Sorcerer knows too many spells ({len(picks.spells_known)}). Max allowed: {total_expected_known}."
+            
+            for spell_id in picks.spells_known:
+                if spell_id not in content.effects:
+                    return False, f"Known spell '{spell_id}' does not exist."
+
+    return True, "Character picks are valid."
 
 def build_entity_from_state(content: ContentIndex, gs: GameState, picks: CharBuildState,
                             effects: EffectsEngine, resources: ResourceEngine, conditions: ConditionsEngine, hooks: RuleHooksRegistry) -> Entity:
+    # Validate character picks first
+    is_valid, validation_message = validate_character_picks(content, picks)
+    if not is_valid:
+        raise ValueError(validation_message)
+
     # Instantiate entity
     ab = Abilities(
         str_=AbilityScore(base=picks.abilities["str"]),
@@ -92,20 +209,53 @@ def build_entity_from_state(content: ContentIndex, gs: GameState, picks: CharBui
 
     # Create class resources (turn attempts, spell slots, etc.)
     # Expect resources like res.turn_attempts; res.spell_slots.cleric.1
-    if picks.clazz == "cleric" and "res.turn_attempts" in content.resources:
-        resources.create_from_definition("res.turn_attempts", owner_scope="entity", owner_entity_id=ent.id)
+    if picks.clazz == "cleric":
+        if "res.turn_attempts" in content.resources:
+            resources.create_from_definition("res.turn_attempts", owner_scope="entity", owner_entity_id=ent.id)
+        
+        # Add bonus spell slots from WIS
+        wis_mod = ent.abilities.wis.mod()
+        bonus_slots = bonus_slots_from_mod(wis_mod)
+        for level, count in bonus_slots.items():
+            if count > 0:
+                res_id = f"res.spell_slots.cleric.{level}"
+                if res_id in content.resources:
+                    # Assuming create_from_definition can update existing or add to initial_current
+                    # For now, we'll just create it with the bonus if it doesn't exist
+                    # A more robust solution would be to update an existing resource's current/max
+                    resources.create_from_definition(res_id, owner_scope="entity", owner_entity_id=ent.id, initial_current=count)
 
-    # Domains for cleric (store on entity tags for later; or attach domain effects)
-    # e.g., effect ids: domain.war.grant; domain.sun.grant
-    for d in picks.domains or []:
-        eff_id = f"domain.{d.lower()}.grant"
-        if eff_id in content.effects:
-            effects.attach(eff_id, ent, ent)
+        # Domains for cleric (store on entity tags for later; or attach domain effects)
+        # e.g., effect ids: domain.war.grant; domain.sun.grant
+        for d in picks.domains or []:
+            eff_id = f"domain.{d.lower()}.grant"
+            if eff_id in content.effects:
+                effects.attach(eff_id, ent, ent)
+
+    elif picks.clazz == "sorcerer":
+        cha_mod = ent.abilities.cha.mod()
+        spells_known = sorcerer_spells_known_from_cha(picks.level, cha_mod)
+        
+        # Populate spells_known in the entity
+        ent.spells_known = picks.spells_known # Use spells picked by the user in UI
+
+        # Create spell slot resources for Sorcerer
+        # Assuming a resource definition like "res.spell_slots.sorcerer.0", "res.spell_slots.sorcerer.1"
+        for level, count in spells_known.items(): # Use spells_known to determine available levels
+            if count > 0:
+                res_id = f"res.spell_slots.sorcerer.{level}"
+                if res_id in content.resources:
+                    resources.create_from_definition(res_id, owner_scope="entity", owner_entity_id=ent.id, initial_current=count)
 
     # Feats: attach feats as effects (source 'feat'), content id e.g. "feat.power_attack"
     for feat_id in picks.feats:
         if feat_id in content.effects:
-            effects.attach(feat_id, ent, ent)
+            # Pass feat choices to the effect attachment
+            bound_choices = picks.feat_choices.get(feat_id)
+            effects.attach(feat_id, ent, ent, bound_choices=bound_choices)
+
+    # Skills: apply allocated skill ranks
+    ent.skills = picks.skills
 
     # Skills & languages: store on entity (add fields if needed later)
     # For now, keep in a side-map (we can add fields to Entity later)

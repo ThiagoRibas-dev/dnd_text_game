@@ -370,10 +370,15 @@ class ActSetOutcome(BaseModel):
     ]
     note: Optional[str] = None
 
+class ActConvertType(BaseModel):
+    op: Literal["convertType"] = "convertType"
+    to: DamageKind
+
 # HookAction union = hook-specific actions + a subset of Operation union you want to allow in hooks
 HookAction = Annotated[
     Union[
         ActModify, ActReroll, ActCap, ActMultiply, ActReflect, ActRedirect, ActAbsorbIntoPool, ActSetOutcome,
+        ActConvertType, # NEW
         # Reuse operation types that make sense in hooks:
         OpSave, OpConditionApply, OpConditionRemove,
         OpResourceCreate, OpResourceSpend, OpResourceRestore, OpResourceSet,
@@ -561,14 +566,23 @@ class AttackGate(BaseModel):
     mode: AttackMode = "none"
     ac_type: Optional[Literal["normal", "touch", "flat-footed"]] = None
     crit_behavior: Optional[str] = None
+    threat_range: Optional[int] = 20
+    crit_mult: Optional[int] = 2
 
     @model_validator(mode="after")
     def _validate(self):
+        # existing checks...
         if self.mode in ("melee_touch", "ranged_touch", "ray"):
             if self.ac_type != "touch":
                 raise ValueError(f"attackGate.mode '{self.mode}' requires ac_type='touch'")
         if self.ac_type == "flat-footed" and self.mode not in ("melee", "ranged"):
             raise ValueError("ac_type='flat-footed' allowed only with mode melee or ranged")
+        
+        # New validation for threat_range and crit_mult
+        if self.threat_range is not None and not (1 <= int(self.threat_range) <= 20):
+            raise ValueError("threat_range must be between 1 and 20")
+        if self.crit_mult is not None and int(self.crit_mult) < 2:
+            raise ValueError("crit_mult must be >= 2")
         return self
 
 class Gates(BaseModel):
@@ -990,6 +1004,14 @@ class ZoneDefinition(BaseModel):
             raise ValueError("; ".join(errs))
         return self
 
+class DeityDefinition(BaseModel):
+    id: IDStr
+    name: str
+    description: Optional[str] = None
+    alignment: str # e.g., "lawful good", "neutral evil"
+    allowed_domains: List[IDStr] = Field(default_factory=list) # List of domain effect IDs, e.g., "domain.fire"
+    allowed_alignments: List[str] = Field(default_factory=list) # List of alignments allowed to worship this deity
+
 ActModify.model_rebuild()
 ActReroll.model_rebuild()
 ActCap.model_rebuild()
@@ -1011,5 +1033,6 @@ CompletionSpec.model_rebuild()
 TaskDefinition.model_rebuild()
 ZoneSuppression.model_rebuild()
 ZoneDefinition.model_rebuild()
+DeityDefinition.model_rebuild()
 OpAbilityDamage.model_rebuild()
 OpAbilityDrain.model_rebuild()

@@ -139,7 +139,11 @@ class RuleHooksRegistry:
             return
 
         if op_name == "schedule":
-            logs.append("[Hooks] schedule: queued actions (not yet implemented)")  # TODO
+            delay = getattr(action, "delay_rounds", None)
+            if delay is not None and target:
+                # schedule actions (action.actions is a list[Operation])
+                self.effects.scheduler.schedule_in_rounds(target.id, int(delay), list(getattr(action, "actions", [])))
+                logs.append(f"[Hooks] scheduled {len(getattr(action, 'actions', []))} action(s) in {delay} round(s)")
             return
 
         # HookAction-specific (modify/reroll/cap/multiply/reflect/redirect/absorbIntoPool/setOutcome)

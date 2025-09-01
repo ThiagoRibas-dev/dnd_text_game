@@ -21,6 +21,8 @@ dev = [
 ]
 
 [project.scripts]
+dndrpg = "dndrpg.app:run_app"
+dndrpg-cli = "dndrpg.cli:app"
 dndrpg-tools = "dndrpg.tools.validate:app"
 
 [tool.setuptools.packages.find]
