@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Set, Optional, Any
 from dndrpg.engine.models import Entity, Abilities, AbilityScore, Size, Weapon, Armor, Shield
 from dndrpg.engine.loader import ContentIndex
 from dndrpg.engine.effects_runtime import EffectsEngine
@@ -50,7 +50,10 @@ def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tu
                     return False, f"Domain '{domain_id}' is not allowed by deity '{deity_def.name}'."
 
     # Validate Campaign Allowed Lists
-    campaign_allowed = content.campaign.allowed
+    # Assuming there's always at least one campaign and we use the first one for character generation
+    if not content.campaigns:
+        return False, "No campaigns defined in content."
+    campaign_allowed = next(iter(content.campaigns.values())).allowed
 
     # Validate Alignment against campaign allowed list
     if isinstance(campaign_allowed.alignments, list) and picks.alignment not in campaign_allowed.alignments:
@@ -79,14 +82,18 @@ def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tu
             return False, f"Skill '{skill_name}' has too many ranks ({ranks}). Max allowed: {max_allowed_ranks}."
 
     # Validate Feats
-    build_view = BuildView(
-        abilities=picks.abilities,
-        clazz=picks.clazz,
-        level=picks.level,
-        race=picks.race,
-        feats=picks.feats,
-        skills=picks.skills,
-    )
+    picks_dict = {
+        "abilities": picks.abilities,
+        "class": picks.clazz, # Use "class" key for BuildView
+        "level": picks.level,
+        "race": picks.race,
+        "feats": picks.feats,
+        "skills": picks.skills,
+        "alignment": picks.alignment,
+        "deity": picks.deity,
+        "domains": picks.domains,
+    }
+    build_view = BuildView(entity=None, picks=picks_dict)
     for feat_id in picks.feats:
         feat_def = content.effects.get(feat_id)
         if not feat_def:
@@ -105,7 +112,7 @@ def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tu
             if level not in expected_slots:
                 return False, f"Cleric cannot prepare level {level} spells at this level."
             if len(prepared_spells) > expected_slots[level]:
-                return False, f"Cleric prepared too many level {level} spells ({len(prepared_spells)}). Max allowed: {expected_slots[level]}<bos>."
+                return False, f"Cleric prepared too many level {level} spells ({len(prepared_spells)}). Max allowed: {expected_slots[level]}."
             for spell_id in prepared_spells:
                 if spell_id not in content.effects: # Assuming spells are effects
                     return False, f"Prepared spell '{spell_id}' does not exist."
@@ -140,11 +147,11 @@ def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tu
     return True, "Character picks are valid."
 
 def build_entity_from_state(content: ContentIndex, gs: GameState, picks: CharBuildState,
-                            effects: EffectsEngine, resources: ResourceEngine, conditions: ConditionsEngine, hooks: RuleHooksRegistry) -> Entity:
+                            effects: EffectsEngine, resources: ResourceEngine, conditions: ConditionsEngine, hooks: RuleHooksRegistry) -> tuple[Entity | None, str | None]:
     # Validate character picks first
     is_valid, validation_message = validate_character_picks(content, picks)
     if not is_valid:
-        raise ValueError(validation_message)
+        return None, validation_message
 
     # Instantiate entity
     ab = Abilities(
@@ -160,7 +167,7 @@ def build_entity_from_state(content: ContentIndex, gs: GameState, picks: CharBui
         level=1, size=Size.MEDIUM, abilities=ab
     )
     # Base class table (extend later)
-    CLASS = {
+    CLASS: Dict[str, Dict[str, Any]] = { # Added type hint for CLASS
         "fighter": {"hd":10, "bab":"full", "fort":"good","ref":"poor","will":"poor"},
         "cleric":  {"hd": 8, "bab":"three_quarter","fort":"good","ref":"poor","will":"good"},
         "sorcerer":{"hd": 4, "bab":"half","fort":"poor","ref":"poor","will":"good"},
@@ -169,11 +176,11 @@ def build_entity_from_state(content: ContentIndex, gs: GameState, picks: CharBui
     def bab_from_prog(prog: str, lvl: int) -> int:
         return {"full":lvl,"three_quarter":(lvl*3)//4,"half":lvl//2}.get(prog, 0)
     cls = CLASS[picks.clazz]
-    ent.base_attack_bonus = bab_from_prog(cls["bab"], 1)
+    ent.base_attack_bonus = bab_from_prog(str(cls["bab"]), 1) # Explicitly cast to str
     ent.base_fort = 2 if cls["fort"]=="good" else 0
     ent.base_ref  = 2 if cls["ref"]=="good" else 0
     ent.base_will = 2 if cls["will"]=="good" else 0
-    ent.hp_max = max(1, cls["hd"] + ent.abilities.con.mod())
+    ent.hp_max = max(1, int(cls["hd"]) + ent.abilities.con.mod()) # Explicitly cast to int
     ent.hp_current = ent.hp_max
     ent.classes = {picks.clazz: 1}
     if picks.clazz in {"cleric","sorcerer"}:
@@ -261,4 +268,4 @@ def build_entity_from_state(content: ContentIndex, gs: GameState, picks: CharBui
     # For now, keep in a side-map (we can add fields to Entity later)
     # Return entity; GameState already exists; assign entity into state.player
     gs.player = ent
-    return ent
+    return ent, None

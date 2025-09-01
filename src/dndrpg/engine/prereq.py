@@ -52,7 +52,7 @@ class BuildView:
     def has_domain(self, name: str) -> bool:
         return name.lower() in [d.lower() for d in (self.picks.get("domains", []) or [])]
 
-def eval_prereq(expr: str, view: BuildView) -> bool:
+def eval_prereq(expr: str, view: BuildView) -> tuple[bool, str]:
     extra: Dict[str, Any] = {
         "has_feat": view.has_feat,
         "skill_ranks": view.skill_ranks,
@@ -69,6 +69,9 @@ def eval_prereq(expr: str, view: BuildView) -> bool:
     # expr may include ability_mod('str'), class_level('cleric'), etc. via eval_expr functions
     try:
         val = eval_expr(expr, extra=extra)
-        return bool(val)
-    except Exception:
-        return False
+        if bool(val):
+            return True, ""
+        else:
+            return False, f"Prerequisite '{expr}' not met."
+    except Exception as e:
+        return False, f"Error evaluating prerequisite '{expr}': {e}"

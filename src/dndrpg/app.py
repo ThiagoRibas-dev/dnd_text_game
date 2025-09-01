@@ -110,6 +110,11 @@ class DnDApp(App):
     Input { width: 30%; margin: 1; }
     Select { width: 30%; margin: 1; }
     .error { color: red; }
+    .skill_scroll_container {
+        height: 20; /* Take up available vertical space */
+        overflow-y: scroll; /* Enable vertical scrolling */
+        border: solid green; /* For debugging, remove later */
+    }
     """
 
     BINDINGS = [("ctrl+c", "quit", "Quit")]
