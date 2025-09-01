@@ -139,7 +139,7 @@ class StepAbility(StepBase):
                     self.app_ref.log_panel.push("[CharGen] Generate scores first, then assign.")
                     return
                 import re
-                m = re.search(r"\[(.*?)\]", str(text))
+                m = re.search(r"[(.*?)]", str(text))
                 scores = [int(x) for x in m.group(1).split(",")] if m else []
                 if not scores or len(scores) != 6: # Ensure 6 scores are present
                     self.app_ref.log_panel.push("[CharGen] No valid scores generated or not enough scores. Click 'Generate (4d6)' first.")
@@ -253,50 +253,18 @@ class StepSkills(StepBase):
             Static("Remaining: 0", id="skill_points_remaining"),
             Horizontal(
                 Vertical(
-                    Label("Appraise:"), Input(placeholder="0", id="skill_appraise", classes="skill_input"),
-                    Label("Autohypnosis:"), Input(placeholder="0", id="skill_autohypnosis", classes="skill_input"),
-                    Label("Balance:"), Input(placeholder="0", id="skill_balance", classes="skill_input"),
+                    Label("Acrobatics:"), Input(placeholder="0", id="skill_acrobatics", classes="skill_input"),
                     Label("Bluff:"), Input(placeholder="0", id="skill_bluff", classes="skill_input"),
-                    Label("Climb:"), Input(placeholder="0", id="skill_climb", classes="skill_input"),
                     Label("Concentration:"), Input(placeholder="0", id="skill_concentration", classes="skill_input"),
-                    Label("Control Shape:"), Input(placeholder="0", id="skill_control_shape", classes="skill_input"),
-                    Label("Craft:"), Input(placeholder="0", id="skill_craft", classes="skill_input"),
-                    Label("Decipher Script:"), Input(placeholder="0", id="skill_decipher_script", classes="skill_input"),
                     Label("Diplomacy:"), Input(placeholder="0", id="skill_diplomacy", classes="skill_input"),
-                    Label("Disable Device:"), Input(placeholder="0", id="skill_disable_device", classes="skill_input"),
-                    Label("Disguise:"), Input(placeholder="0", id="skill_disguise", classes="skill_input"),
-                    Label("Escape Artist:"), Input(placeholder="0", id="skill_escape_artist", classes="skill_input"),
-                    Label("Forgery:"), Input(placeholder="0", id="skill_forgery", classes="skill_input"),
-                    Label("Gather Information:"), Input(placeholder="0", id="skill_gather_information", classes="skill_input"),
-                    Label("Handle Animal:"), Input(placeholder="0", id="skill_handle_animal", classes="skill_input"),
                     Label("Heal:"), Input(placeholder="0", id="skill_heal", classes="skill_input"),
-                    Label("Hide:"), Input(placeholder="0", id="skill_hide", classes="skill_input"),
-                    Label("Intimidate:"), Input(placeholder="0", id="skill_intimidate", classes="skill_input"),
-                    Label("Jump:"), Input(placeholder="0", id="skill_jump", classes="skill_input"),
-                    Label("Knowledge:"), Input(placeholder="0", id="skill_knowledge", classes="skill_input"),
-                    Label("Listen:"), Input(placeholder="0", id="skill_listen", classes="skill_input"),
-                    Label("Martial Lore:"), Input(placeholder="0", id="skill_martial_lore", classes="skill_input"),
                 ),
                 Vertical(
-                    Label("Move Silently:"), Input(placeholder="0", id="skill_move_silently", classes="skill_input"),
-                    Label("Open Lock:"), Input(placeholder="0", id="skill_open_lock", classes="skill_input"),
-                    Label("Perform:"), Input(placeholder="0", id="skill_perform", classes="skill_input"),
-                    Label("Profession:"), Input(placeholder="0", id="skill_profession", classes="skill_input"),
-                    Label("Psicraft:"), Input(placeholder="0", id="skill_psicraft", classes="skill_input"),
-                    Label("Ride:"), Input(placeholder="0", id="skill_ride", classes="skill_input"),
-                    Label("Search:"), Input(placeholder="0", id="skill_search", classes="skill_input"),
+                    Label("Intimidate:"), Input(placeholder="0", id="skill_intimidate", classes="skill_input"),
+                    Label("Knowledge (Arcana):"), Input(placeholder="0", id="skill_knowledge_arcana", classes="skill_input"),
+                    Label("Listen:"), Input(placeholder="0", id="skill_listen", classes="skill_input"),
                     Label("Sense Motive:"), Input(placeholder="0", id="skill_sense_motive", classes="skill_input"),
-                    Label("Sleight of Hand:"), Input(placeholder="0", id="skill_sleight_of_hand", classes="skill_input"),
-                    Label("Speak Language:"), Input(placeholder="0", id="skill_speak_language", classes="skill_input"),
-                    Label("Spellcraft:"), Input(placeholder="0", id="skill_spellcraft", classes="skill_input"),
                     Label("Spot:"), Input(placeholder="0", id="skill_spot", classes="skill_input"),
-                    Label("Survival:"), Input(placeholder="0", id="skill_survival", classes="skill_input"),
-                    Label("Swim:"), Input(placeholder="0", id="skill_swim", classes="skill_input"),
-                    Label("Truespeak:"), Input(placeholder="0", id="skill_truespeak", classes="skill_input"),
-                    Label("Tumble:"), Input(placeholder="0", id="skill_tumble", classes="skill_input"),
-                    Label("Use Magic Device:"), Input(placeholder="0", id="skill_use_magic_device", classes="skill_input"),
-                    Label("Use Psionic Device:"), Input(placeholder="0", id="skill_use_psionic_device", classes="skill_input"),
-                    Label("Use Rope:"), Input(placeholder="0", id="skill_use_rope", classes="skill_input"),
                 )
             ),
             Button("Next", id="next"), Button("Back", id="back")
@@ -305,6 +273,7 @@ class StepSkills(StepBase):
     def on_mount(self):
         self._update_skill_points()
 
+    @on(Input.Changed, ".skill_input")
     def on_skill_input_changed(self, event: Input.Changed):
         self._update_skill_points()
 
@@ -541,7 +510,7 @@ class StepKits(StepBase):
             self.app_ref.pop_screen()  # Pop StepAbility
             self.app_ref.pop_screen()  # Pop StepNameAlignment
             self.app_ref.pop_screen()  # Pop CampaignSelectScreen
-            self.app_ref.pop_screen()  # Pop TitleScreen (NEW)
+            self.app_ref.pop_screen()  # Pop TitleScreen (NEW) 
             
             self.app_ref.refresh_all() # Refresh main game UI
         elif ev.button.id == "back":

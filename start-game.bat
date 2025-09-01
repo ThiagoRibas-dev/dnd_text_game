@@ -1,4 +1,4 @@
 call D:\SHARED\environment.bat
 pip install .
 
-uv run python -m dndrpg
+start uv run python -m dndrpg

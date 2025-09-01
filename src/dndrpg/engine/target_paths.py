@@ -223,7 +223,7 @@ TARGET_PATH_REGISTRY: Dict[str, TargetPathInfo] = {
         allowed_operators=["add", "subtract", "set", "min", "max"],
         requires_bonus_type=True,
         value_type="int",
-        example_paths=["skills.acrobatics", "skills.perception"]
+        example_paths=["skills.jump", "skills.listen"]
     ),
     "immunities": TargetPathInfo(
         prefix="immunities",
