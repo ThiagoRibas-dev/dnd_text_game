@@ -265,7 +265,7 @@ class RuleHooksRegistry:
         hooks = list(self._by_scope.get("incoming.damage", {}).get(target_entity_id, []))
         if not hooks:
             return result
-        ctx = {"event": "incoming.damage"}
+        ctx = {"event": damage_context.get("event","incoming.damage")}
         for rh in hooks:
             if self._is_parent_suppressed(rh):
                 continue
@@ -273,7 +273,9 @@ class RuleHooksRegistry:
                 continue
             for act in rh.actions:
                 op = getattr(act, "op", None)
-                if op == "multiply":
+                if op == "convertType":
+                    result["convert"] = getattr(act, "to")
+                elif op == "multiply":
                     result["multiply"] = getattr(act, "factor", 1.0)
                 elif op == "cap":
                     result["cap"] = getattr(act, "amount", None)

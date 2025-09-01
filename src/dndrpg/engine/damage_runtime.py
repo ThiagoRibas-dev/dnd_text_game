@@ -121,13 +121,14 @@ class DamageEngine:
         if not working:
             return PipelineResult(0,0,0,logs)
 
-        # Stage 2: Type conversion via pre-hook (optional)
+        # Stage 2: Type conversion via pre-hook
         if self.hooks:
-            self.hooks.incoming_damage(target_entity_id, {"event":"incoming.damage.pre"})
-            # If a conversion is requested
-            # conv = tr.get("convert") if isinstance(tr, dict) else None  # only if you added convert in hooks
-            # We’ll accept an inline "convert" mapping: {"from":"fire","to":"cold"} — optional future
-            # For now, skip unless explicitly implemented in hooks
+            tr = self.hooks.incoming_damage(target_entity_id, {"event":"incoming.damage.pre"})
+            conv_to = tr.get("convert")
+            if conv_to:
+                for p in working:
+                    p.dkind = conv_to
+                logs.append(f"[Dmg] Converted type to {conv_to} by hook")
 
         # Stage 3: Resist / DR / Ablative pools
         # 3.1 Energy resistance per packet

@@ -325,35 +325,8 @@ Feature 9: Damage type conversion (pipeline stage 2)
         op: Literal["convertType"] = "convertType"
         to: DamageKind
     ```
-9.2. Modify incoming_damage in src/dndrpg/engine/rulehooks_runtime.py: NOT Completed. (Missing 'convertType' handling.)
-    ```python
-        def incoming_damage(self, target_entity_id: str, damage_context: Dict[str, Any]) -> Dict[str, Any]:
-            result: Dict[str, Any] = {}
-            hooks = list(self._by_scope.get("incoming.damage", {}).get(target_entity_id, []))
-            if not hooks:
-                return result
-            ctx = {"event": damage_context.get("event","incoming.damage")}
-            for rh in hooks:
-                if self._is_parent_suppressed(rh): continue
-                if not self._match(rh, ctx): continue
-                for act in rh.actions:
-                    op = getattr(act, "op", None)
-                    if op == "convertType":
-                        result["convert"] = getattr(act, "to")
-                    # keep multiply/cap/reflect handling as before
-            return result
-    ```
-9.3. Modify DamageEngine.apply_packets in src/dndrpg/engine/damage_runtime.py: NOT Completed. (Type conversion logic is commented out/not implemented.)
-    ```python
-            # Stage 2: Type conversion via pre-hook
-            if self.hooks:
-                tr = self.hooks.incoming_damage(target_entity_id, {"event":"incoming.damage.pre"})
-                conv_to = tr.get("convert")
-                if conv_to:
-                    for p in working:
-                        p.dkind = conv_to
-                    logs.append(f"[Dmg] Converted type to {conv_to} by hook")
-    ```
+9.2. Modify incoming_damage in src/dndrpg/engine/rulehooks_runtime.py: Completed.
+9.3. Modify DamageEngine.apply_packets in src/dndrpg/engine/damage_runtime.py: Completed.
 
 Feature 10: Crit confirmation logic
 
