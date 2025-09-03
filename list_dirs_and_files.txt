@@ -8799,3 +8799,30 @@ def test_damage_pipeline_with_temp_hp():
     assert p.hp_current == 50 - 10
     assert any("[Dmg] Temporary HP absorbed 20 (0 left)" in log for log in result.logs)
 ```
+
+```
+File: D:\Projects\Game Dev\D&D text RPG\.gitignore
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Virtual environments
+.venv/
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+
+# Local scripts
+run-codium.bat
+
+# Caches
+.mypy_cache/
+
+# Lock files
+uv.lock
+```

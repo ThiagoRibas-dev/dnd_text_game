@@ -1,10 +1,7 @@
-id: domain.fire
-name: Fire Domain
-description: Gain fire-related abilities.
+schema_version: 1
+id: domain.fire.grant
+name: Fire Domain (Granted)
 abilityType: Ex
-type: Domain
-properties:
-  - type: bonus
-    target: spell_damage.fire
-    amount: 1
-    bonus_type: untyped
+activation: { action: passive }
+duration: { type: permanent }
+modifiers: []

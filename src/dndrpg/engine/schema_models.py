@@ -67,13 +67,7 @@ class Modifier(BaseModel):
     def _validate(self):
         errs: list[str] = []
 
-        # 1) Prefix allowlist
-        prefix = self.targetPath.split(".", 1)[0]
-        if prefix not in _ALLOWED_PREFIXES:
-            errs.append(
-                f"targetPath prefix '{prefix}' not allowed; allowed: "
-                f"{sorted(_ALLOWED_PREFIXES)}"
-            )
+        
 
         # 2) Deprecate replaceFormula
         if self.operator == "replaceFormula":
@@ -598,10 +592,10 @@ class StackingPolicy(BaseModel):
     named: Optional[Literal["no_stack_highest", "no_stack_latest", "stack"]] = None
 
     # Which key defines “same named effect”
-    # - "id" (default) → treat same effect id as same named
-    # - "name" → same display name
-    # - "group:<key>" → uses entries in familyKeys to build groups (see below)
-    # - "tag:<tag>" → engines can precompute a tag membership set
+    # - "id" (default) -> treat same effect id as same named
+    # - "name" -> same display name
+    # - "group:<key>" -> uses entries in familyKeys to build groups (see below)
+    # - "tag:<tag>" -> engines can precompute a tag membership set
     namedKey: Optional[str] = None
 
     # How to compare for no_stack_highest

@@ -6,14 +6,14 @@ Incorporates the Effects/State Spec v1.1 and the three modes of play (Encounter,
 - Goals:
   - Drive all mechanics through the Effects/State model (definitions at author-time, instances at runtime).
   - First-class support for Encounter, Exploration/Travel, and Downtime modes with clean transitions.
-  - Deterministic, explainable outcomes (SR → Save → Attack → Resolution; canonical damage pipeline).
+  - Deterministic, explainable outcomes (SR -> Save -> Attack -> Resolution; canonical damage pipeline).
   - Content-driven: races/classes/feats/spells/items/conditions/traps/hazards authored as JSON/YAML blueprints.
 
 2) Core architecture
 - Engine layers
   - Entity System: Entities with attributes, abilities, senses, movement, defenses, skills, resources, conditions, inventory, and content lists (known/prepared spells, maneuvers, soulmelds, etc.). Derived stats computed on demand via active Modifiers and Rule Hooks.
   - Effects Engine: Loads and attaches EffectInstances; evaluates SR/Save/Attack gates; executes Operations; registers Rule Hooks; manages suppression/antimagic/dispels.
-  - Damage System: Applies the canonical 7-step damage pipeline (immunity → conversion → resistance/DR/ablative pools → vulnerability → apply → rider negation → post hooks).
+  - Damage System: Applies the canonical 7-step damage pipeline (immunity -> conversion -> resistance/DR/ablative pools -> vulnerability -> apply -> rider negation -> post hooks).
   - Scheduler/Time: Game clock and tick scheduler (rounds, minutes, hours, days); durations; recurring ticks; ongoing saves; refresh cadences (per_round, per_encounter, per_day).
   - Mode Manager: State machine for Encounter, Exploration, Downtime; supplies tick size and default handlers; transitions and boundaries.
   - Targeting/Area: Grid geometry, LoS/LoE, cover/concealment, shape placement (burst, cone, line, wall, square/sphere).
@@ -29,8 +29,8 @@ Modes: encounter | exploration | downtime
   - setMode(mode, params?) // moves between exploration/downtime
   - advanceTime(duration) // delegates to scheduler with mode tick policy
 - Transitions
-  - Exploration → Encounter: Random encounter/trap/NPC triggers; initiative rolled; schedule per-encounter resources and “at encounter start” hooks; set grids and positions.
-  - Encounter → Exploration: All enemies neutralized/left; trap resolved; explicit disengage; resolve “until end of encounter” effects; refresh per-encounter resources; grant post-battle housekeeping (search, stabilize, loot).
+  - Exploration -> Encounter: Random encounter/trap/NPC triggers; initiative rolled; schedule per-encounter resources and “at encounter start” hooks; set grids and positions.
+  - Encounter -> Exploration: All enemies neutralized/left; trap resolved; explicit disengage; resolve “until end of encounter” effects; refresh per-encounter resources; grant post-battle housekeeping (search, stabilize, loot).
   - Exploration ↔ Downtime: Player initiates long tasks (camp, craft, travel-in-days); interruptions (encounters, events) pause tasks and transition back.
 - Time granularity
   - Encounter: rounds (6s); turn order; actions/interrupts.
@@ -40,9 +40,9 @@ Modes: encounter | exploration | downtime
 4) Time and scheduler
 - Single game clock; scheduler executes due timers in order.
 - Ticks
-  - Encounter: advanceRound(1) → startOfRound → per-entity startOfTurn/turn actions/endOfTurn → endOfRound.
-  - Exploration: advanceMinutes(N) or advanceHours(N) → process recurring ticks/ongoing saves that land within window; random encounter checks; light consumption; environmental exposure; recovery ticks (fast healing/regeneration).
-  - Downtime: advanceDays/Weeks → daily refresh (per_day resources, natural healing, disease/poison ticks); task steps; rest/prep windows.
+  - Encounter: advanceRound(1) -> startOfRound -> per-entity startOfTurn/turn actions/endOfTurn -> endOfRound.
+  - Exploration: advanceMinutes(N) or advanceHours(N) -> process recurring ticks/ongoing saves that land within window; random encounter checks; light consumption; environmental exposure; recovery ticks (fast healing/regeneration).
+  - Downtime: advanceDays/Weeks -> daily refresh (per_day resources, natural healing, disease/poison ticks); task steps; rest/prep windows.
 - Rest/Prep windows (interruptible)
   - Arcane: 8 hours rest + 1h prep; Divine: fixed-time (e.g., dawn) + 1h prep.
   - Interrupts (encounter) break rest; partial rest counts for fatigue removal but not spells (RAW).
@@ -115,7 +115,7 @@ Modes: encounter | exploration | downtime
 - explain last prints:
   - Gates: SR roll/result; Save DC/result/branch; Attack roll/confirm, concealment/miss chance.
   - Modifiers stacked: by bonus type and sourceKey; final values (e.g., AC breakdown).
-  - Damage breakdown: packets → resist/DR/pool → vulnerability → HP/THP; injury riders negated if DR reduced to 0.
+  - Damage breakdown: packets -> resist/DR/pool -> vulnerability -> HP/THP; injury riders negated if DR reduced to 0.
   - Duration/scheduler: timers started, next ticks, end conditions.
 - Determinism: seeded RNG per encounter; include seed in logs for replay.
 
@@ -125,7 +125,7 @@ Modes: encounter | exploration | downtime
   - Grease square: Reflex save or prone; Balance DC 10 to move; duration CL rounds.
   - Darkness/Daylight auras: concealment and counters.
   - Antimagic field: suppress Su/Sp/Spell; summoned creatures wink out.
-  - Trap zones: pressure plate (on-enter → darts attack), pit (on-enter → fall), glyphs (on-enter → spell effect).
+  - Trap zones: pressure plate (on-enter -> darts attack), pit (on-enter -> fall), glyphs (on-enter -> spell effect).
 
 12) Engine policies (documented defaults)
 - Grid: 5-ft squares; diagonal costs 1.5 (5-10-5).
@@ -154,7 +154,7 @@ Modes: encounter | exploration | downtime
 - Unit tests
   - Stacking: enhancement vs morale vs dodge; same-source untyped doesn’t stack.
   - Gates: SR once per target; saves branch correctly; rays/touches use correct AC.
-  - Damage pipeline: immunity → resist/DR/pool → vulnerability; DR negates injury riders; temp HP before real HP.
+  - Damage pipeline: immunity -> resist/DR/pool -> vulnerability; DR negates injury riders; temp HP before real HP.
   - Antimagic: suppresses Su/Sp/Spell only; Ex persists; summons wink out.
   - Encounter boundaries: per-encounter resets; end-of-encounter effects removed.
   - Rest/prep: arcane and divine windows; interrupts cancel spell prep.

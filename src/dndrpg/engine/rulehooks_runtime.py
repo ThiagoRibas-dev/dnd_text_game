@@ -1,17 +1,16 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Literal
+from typing import Any, Dict, List, Optional, Tuple, Literal, TYPE_CHECKING
 from uuid import uuid4
 from pydantic import BaseModel, Field
 
-from dndrpg.engine.schema_models import RuleHook, EffectDefinition, ConditionDefinition, HookAction, ZoneDefinition
+from dndrpg.engine.schema_models import RuleHook, EffectDefinition, ConditionDefinition, HookAction, ZoneDefinition, Operation
 from dndrpg.engine.models import Entity
 from dndrpg.engine.loader import ContentIndex
-from typing import TYPE_CHECKING
+from dndrpg.engine.conditions_runtime import ConditionsEngine
 
 if TYPE_CHECKING:
     from dndrpg.engine.effects_runtime import EffectsEngine
-    from dndrpg.engine.conditions_runtime import ConditionsEngine
     from dndrpg.engine.resources_runtime import ResourceEngine
     from .state import GameState
 
@@ -24,11 +23,7 @@ class HookDecision:
     # For incoming.effect: allow or block (default allow); suppress would suppress if engine supported
     allow: bool = True
     suppress: bool = False
-    notes: List[str] = None
-
-    def __post_init__(self):
-        if self.notes is None:
-            self.notes = []
+    notes: List[str] = Field(default_factory=list)
 
 class RegisteredHook(BaseModel):
     hook_id: str = Field(default_factory=lambda: uuid4().hex)
@@ -38,6 +33,11 @@ class RegisteredHook(BaseModel):
     priority: int = 0
 
     source_kind: Literal["effect","condition","zone"] = "effect"
+    source_id: Optional[str] = None
+    source_name: Optional[str] = None
+    parent_instance_id: Optional[str] = None
+    target_entity_id: Optional[str] = None
+    model_config = {"extra": "allow"}  # allow source_name, parent_instance_id, target_entity_id
 
 class RuleHooksRegistry:
     """
@@ -47,7 +47,7 @@ class RuleHooksRegistry:
     """
 
     def __init__(self, content: ContentIndex, state: "GameState",
-                 effects: EffectsEngine, conditions: ConditionsEngine, resources: ResourceEngine):
+                 effects: Optional[EffectsEngine], conditions: ConditionsEngine, resources: ResourceEngine):
         self.content = content
         self.state = state
         self.effects = effects
@@ -108,6 +108,16 @@ class RuleHooksRegistry:
             return self.state.player
         return None
 
+    def _is_parent_suppressed(self, rh: RegisteredHook) -> bool:
+        pid = getattr(rh, "parent_instance_id", None)
+        if not pid:
+            return False
+        # If hook came from an effect/condition instance on target, find and check suppression
+        for inst in self.state.active_effects.get(getattr(rh, "target_entity_id", ""), []):
+            if inst.instance_id == pid:
+                return getattr(inst, "suppressed", False)
+        return False
+
     def _match(self, rh: RegisteredHook, context: Dict[str, Any]) -> bool:
         # Very simple deep match: all keys in rh.match must exist in context and equal
         # For 'event' we allow exact or startswith for 'startOfTurn(...)'
@@ -135,12 +145,14 @@ class RuleHooksRegistry:
         if op_name in ("save", "condition.apply", "condition.remove",
                        "resource.create", "resource.spend", "resource.restore", "resource.set"):
             # Reuse EffectsEngine executor util (create a thin wrapper method)
-            self.effects.execute_operations([action], actor, target, parent_instance_id=None, logs=logs)
+            if self.effects:
+                if isinstance(action, Operation):
+                    self.effects.execute_operations([action], actor, target, parent_instance_id=None, logs=logs)
             return
 
         if op_name == "schedule":
             delay = getattr(action, "delay_rounds", None)
-            if delay is not None and target:
+            if delay is not None and target and self.effects and self.effects.scheduler:
                 # schedule actions (action.actions is a list[Operation])
                 self.effects.scheduler.schedule_in_rounds(target.id, int(delay), list(getattr(action, "actions", [])))
                 logs.append(f"[Hooks] scheduled {len(getattr(action, 'actions', []))} action(s) in {delay} round(s)")

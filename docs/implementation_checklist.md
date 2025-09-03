@@ -56,7 +56,7 @@ Feature 1: Character Creation - Ability Methods
                 # Point-buy inputs
                 Horizontal(Input(placeholder="STR", id="pb_str"), Input(placeholder="DEX", id="pb_dex"), Input(placeholder="CON", id="pb_con")),
                 Horizontal(Input(placeholder="INT", id="pb_int"), Input(placeholder="WIS", id="pb_wis"), Input(placeholder="CHA", id="pb_cha")),
-                # Standard array/Scores generated → user chooses assignment order
+                # Standard array/Scores generated -> user chooses assignment order
                 Label("Assignment order (comma-separated, e.g., str,dex,con,int,wis,cha):"),
                 Input(placeholder="str,dex,con,int,wis,cha", id="assign"),
                 Button("Generate (4d6)", id="gen4d6"),

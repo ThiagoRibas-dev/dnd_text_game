@@ -24,12 +24,12 @@ M0 — Boot flow: Campaigns, Saves, Character Creation [x]
   - [x] Starting wealth:
     - [x] Option A: class kits (from content) or Option B: roll class gold and shop
   - [x] Equipment: pick from kits or purchase; auto-equip reasonable defaults
-  - [x] Summary screen with validation (encumbrance, illegal combos) → confirm and start
+  - [x] Summary screen with validation (encumbrance, illegal combos) -> confirm and start
   - [x] Output: fully-built Entity + initial GameState seeded to campaign start
 - [x] CLI fallback (no TUI)
   - [x] Commands: new, continue, load <slot>, delete <slot>, create-character (wizard in prompts)
 
-Acceptance: From the title screen, you can New Game → choose SRD Sandbox → build a level 1 character → spawn into world; Continue/Load works with save slots; saves record campaign id/version.
+Acceptance: From the title screen, you can New Game -> choose SRD Sandbox -> build a level 1 character -> spawn into world; Continue/Load works with save slots; saves record campaign id/version.
 
 M1 — Project foundation and core models
 - [x] Repo bootstrap finalized (pyproject, src layout, tests, CI)
@@ -57,7 +57,7 @@ M1 — Project foundation and core models
     - [x] Actions (modify, reroll, cap, multiply, reflect/redirect, absorbIntoPool, setOutcome, save, condition.apply/remove, resource.*, schedule)
     - [x] Validate allowed actions per hook scope
   - [x] EffectDefinition tightening
-    - [x] range.type == "fixed-ft" → require distance_ft
+    - [x] range.type == "fixed-ft" -> require distance_ft
     - [x] area.shape constraints (require size_ft or radius_ft/length_ft/width_ft as appropriate)
     - [x] duration rules (non-instant effects must have duration; concentration needs concentration:true)
     - [x] gates consistency (attack.ac_type required for touch/flat-footed modes; sr applies only to Spell/Sp)
@@ -70,7 +70,7 @@ M1 — Project foundation and core models
     - [x] tags enum (blinded, stunned, prone, etc.); precedence unique; default_duration must be allowed combos
   - [x] ResourceDefinition tightening
     - [x] capacity.formula required; capacity.cap >= 0
-    - [x] refresh.behavior == "increment_by" → require increment_by
+    - [x] refresh.behavior == "increment_by" -> require increment_by
     - [x] absorption.absorbTypes enum; absorbPerHit >= 0; absorbOrder enum
     - [x] freezeOnAttach boolean; scope enum enforced
   - [x] TaskDefinition tightening
@@ -95,14 +95,14 @@ M1 — Project foundation and core models
 
 Acceptance: Can load a player, stats compute correctly, content files validate, and tests run green.
 
-M2 — Effects/State engine (definitions → instances)
+M2 — Effects/State engine (definitions -> instances)
 - [x] EffectDefinition/EffectInstance implemented (blueprint vs runtime)
 - [x] ResourceDefinition/ResourceState implemented (capacity formulas, refresh cadence)
 - [x] ConditionDefinition/ConditionInstance implemented
 - [x] Modifiers engine with stacking rules:
   - [x] Typed bonuses (enhancement, morale, luck, insight, competence, sacred, profane, resistance, deflection, dodge, size, natural armor)
   - [x] Unnamed bonuses + same-sourceKey non-stacking
-  - [x] Operator ordering: set/replace → add/sub (stacking) → mul/div → min/max → cap/clamp
+  - [x] Operator ordering: set/replace -> add/sub (stacking) -> mul/div -> min/max -> cap/clamp
 - [x] Rule hooks registry (incoming.effect, on.attack pre/post, on.save pre/post, scheduler ticks, incoming.damage)
 - [x] Operations: damage/heal (HP/nonlethal/ability dmg/drain), apply/remove condition, (create/spend/restore) resource, attach/detach effects, create zone
 - [x] Antimagic/suppression flags per abilityType (Ex/Su/Sp/Spell)
@@ -120,7 +120,7 @@ M3 — Gates and damage pipeline
   - [x] Save gate (Fort/Ref/Will, DC expressions, branch policies: negates/half/partial/none)
   - [x] Attack gate (melee/ranged/touch/ray; crit confirm; concealment/miss chance)
 - [x] Damage pipeline:
-  - [x] 1) Immunity → 2) Type conversion → 3) Resist/DR/ablative pools → 4) Vulnerability → 5) Apply to HP/THP → 6) Injury rider negation (if DR reduced to 0) → 7) Post hooks
+  - [x] 1) Immunity -> 2) Type conversion -> 3) Resist/DR/ablative pools -> 4) Vulnerability -> 5) Apply to HP/THP -> 6) Injury rider negation (if DR reduced to 0) -> 7) Post hooks
   - [x] DR policy: apply to total physical damage per attack (documented)
   - [x] Energy resist per packet, vulnerabilities, Temp HP before HP
 - [x] Explain/trace for last action (rolls, stacking, damage breakdown)
@@ -198,7 +198,7 @@ Acceptance: A level-1 Cleric and Fighter can adventure, cast/attack, travel, and
 
 M7 — Exploration/Travel systems
 - [ ] Travel pacing (fast/normal/slow), encumbrance, terrain/weather modifiers
-- [ ] Forced march → Fatigue/Exhausted (conditions)
+- [ ] Forced march -> Fatigue/Exhausted (conditions)
 - [ ] Foraging & navigation (Survival)
 - [ ] Stealth/watch loop (group Stealth vs Perception; applies surprise at encounter start)
 - [ ] Random encounter tables by biome/time/weather; cadence (per hour); transition to Encounter mode
@@ -228,7 +228,7 @@ M9 — TUI/UX polish
 - [ ] Explain last: detailed rolls, stacking breakdown, damage pipeline, durations started
 - [ ] Hot reload of content (watchdog) with safe re-render
 - [ ] Content hot-reload
-  - [ ] File watcher (watchdog) on content/; on change → reparse into ContentIndex; log added/updated/removed ids
+  - [ ] File watcher (watchdog) on content/; on change -> reparse into ContentIndex; log added/updated/removed ids
   - [ ] Manual command: reload content (forces a full rescan)
   - [ ] Toggle command: content watch on/off
   - [ ] Safety policy: existing entities keep deep-copied items; only new clones use updated definitions (log when diverging)
@@ -294,7 +294,7 @@ Testing & QA (continuous across milestones)
   - [ ] Fighter vs Goblin with DR 5/silver; Power Attack math
   - [ ] Grease zone: saves each round; Balance DC to move
   - [ ] Divine Power: BAB floor, +6 Str, temp HP ticks, duration expiry
-  - [ ] Travel hour: light burn, random encounter, stealth vs perception → surprise
+  - [ ] Travel hour: light burn, random encounter, stealth vs perception -> surprise
   - [ ] Craft 2 weeks (take 10): progress & completion
 
 ## Post-1.0 nice-to-haves (backlog)

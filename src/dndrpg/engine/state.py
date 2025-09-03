@@ -1,4 +1,3 @@
-import random
 from pydantic import BaseModel, Field
 from typing import Dict, List
 from .models import Entity, Abilities, AbilityScore, Size, Item
@@ -19,8 +18,9 @@ class GameState(BaseModel):
     resources: Dict[str, List[ResourceState]] = Field(default_factory=dict)
     active_zones: Dict[str, List[ZoneInstance]] = Field(default_factory=dict)  # owner_entity_id -> zones
     last_trace: list[str] = Field(default_factory=list)
-    seed: int = Field(default_factory=lambda: random.randint(0, 2**32 - 1))
-    rng_state: tuple = Field(default_factory=lambda: random.getstate())
+    mode: str = "exploration"
+    clock_seconds: float = 0.0
+    rng_seed: int | None = None
 
     def resources_summary(self) -> dict[str, int]:
         # Aggregate entity-scoped resources for player
@@ -40,12 +40,6 @@ class GameState(BaseModel):
         if total_thp > 0:
             out["Temp HP"] = total_thp
         return out
-
-    def initialize_rng(self):
-        random.setstate(self.rng_state)
-
-    def update_rng_state(self):
-        self.rng_state = random.getstate()
 
 
 def default_cleric_lvl1(content: ContentIndex) -> Entity:
@@ -89,8 +83,6 @@ def default_goblin(content: ContentIndex) -> Entity:
 
 def default_state(content: ContentIndex) -> GameState:
     game_state = GameState(player=default_cleric_lvl1(content), npcs=[default_goblin(content)])
-    random.seed(game_state.seed)
-    game_state.update_rng_state()
     return game_state
 
 GameState.model_rebuild()

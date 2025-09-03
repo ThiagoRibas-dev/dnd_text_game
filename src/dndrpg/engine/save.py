@@ -5,6 +5,7 @@ import json
 import time
 from typing import List, Optional
 from pydantic import BaseModel
+import random
 
 SAVE_ROOT = Path.home() / ".dndrpg" / "saves"
 
@@ -52,7 +53,7 @@ def latest_save() -> Optional[SaveMeta]:
     saves = list_saves()
     return saves[0] if saves else None
 
-def save_game(slot_id: str, campaign_id: str, engine_version: str, state: BaseModel, description: str = "") -> None:
+def save_game(slot_id: str, campaign_id: str, engine_version: str, state: BaseModel, rng: random.Random, description: str = "") -> None:
     ensure_save_root()
     sd = _slot_dir(slot_id)
     sd.mkdir(parents=True, exist_ok=True)
@@ -63,6 +64,7 @@ def save_game(slot_id: str, campaign_id: str, engine_version: str, state: BaseMo
         "last_played_ts": time.time(),
         "description": description,
         "rng_seed": state.rng_seed if hasattr(state, 'rng_seed') else None,
+        "rng_state": rng.getstate(),
         "mode": state.mode if hasattr(state, 'mode') else None,
         "clock_seconds": state.clock_seconds if hasattr(state, 'clock_seconds') else None,
     }

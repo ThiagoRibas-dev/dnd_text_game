@@ -149,7 +149,7 @@ Gates
 - saveGate: { type: Fort|Ref|Will, dcExpression, effect: negates|half|partial|none }
 - srGate: applies to Spell/Sp when spell entry specifies SR:Yes; one caster level check per casting/use per target
 - attackGate: { mode: melee|ranged|touch|ray, AC type, concealment/miss chance integration, crit behavior }
-- Gate order (default): SR Gate → Save Gate → Attack Gate → Resolution (per target); effects may specify a special order rarely
+- Gate order (default): SR Gate -> Save Gate -> Attack Gate -> Resolution (per target); effects may specify a special order rarely
 
 Resolution (upon successful gating per target)
 - operations: list of Operations to execute (see Section 9)
@@ -233,7 +233,7 @@ Fields
 
 Evaluation and stacking
 - Within one stat:
-  - set/replace → add/sub (apply stacking rules by type and same-sourceKey) → mul/div → min/max → cap/clamp
+  - set/replace -> add/sub (apply stacking rules by type and same-sourceKey) -> mul/div -> min/max -> cap/clamp
 - Dodge bonuses stack with dodge; most typed bonuses do not stack with themselves; untyped bonuses stack unless same-sourceKey policy overrides.
 
 9) Operations
@@ -288,7 +288,7 @@ AttackContext
 - metadata: material/alignment tags for DR/resist bypass
 
 Damage pipeline (default)
-1) Immunity: if matched by packet.type or descriptors → amount=0
+1) Immunity: if matched by packet.type or descriptors -> amount=0
 2) Conversion: convert/set type/tags as rules dictate
 3) Resistance/DR/pool
    - Energy resist: reduce amount by resistance per packet
@@ -296,7 +296,7 @@ Damage pipeline (default)
    - Ablative pools: absorbIntoPool; decrement ResourceState.current
 4) Vulnerability: multiply remaining amount (default round down)
 5) Apply: subtract from HP (or to nonlethal per rules)
-6) Injury riders: if physical damage reduced to 0 by DR → negate injury-only riders
+6) Injury riders: if physical damage reduced to 0 by DR -> negate injury-only riders
 7) Trigger post-damage hooks
 
 12) Condition
@@ -410,7 +410,7 @@ Effect activation (per effect)
 2) Pay costs: spend resources/slots; set concentration if required
 3) Bind choices: learn-time/rest-time/use-time selections
 4) Select targets/area per range and filter
-5) For each target: SR Gate → Save Gate → Attack Gate → Resolution (execute operations; attach/detach instances; apply modifiers; register rule hooks; create resource states; schedule timers)
+5) For each target: SR Gate -> Save Gate -> Attack Gate -> Resolution (execute operations; attach/detach instances; apply modifiers; register rule hooks; create resource states; schedule timers)
 6) Start durations; schedule recurring ticks and ongoing saves
 7) Suppression/Dispel handling: track abilityType for later checks; apply suppression where applicable
 8) Cleanup: on duration end, on leaving area, on dispel, on concentration break; detach instance; deregister hooks; expire owned ResourceStates

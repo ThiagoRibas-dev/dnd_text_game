@@ -67,16 +67,6 @@ class EffectsEngine:
         self.rng = rng or random.Random()
         self.gates = GatesEngine(self.modifiers, self.rng) if self.modifiers else None
         self.scheduler = scheduler # Assign scheduler
-        self.content = content
-        self.state = state
-        self.resources = resources or ResourceEngine(content, state)
-        self.conditions = conditions or ConditionsEngine(content, state)
-        self.hooks = hooks
-        self.damage = damage
-        self.zones = zones
-        self.modifiers = modifiers
-        self.rng = rng or random.Random()
-        self.gates = GatesEngine(self.modifiers, self.rng) if self.modifiers else None
 
     def execute_operations(self, ops: List[Operation], actor: Optional[Entity], target: Optional[Entity], *,
                            parent_instance_id: Optional[str] = None, logs: Optional[List[str]] = None,
@@ -84,6 +74,7 @@ class EffectsEngine:
         out = logs if logs is not None else []
         actor = actor or target
         buffered_packets: List[DamagePacket] = []
+
         def flush_packets():
             nonlocal buffered_packets
             if not buffered_packets or not self.damage or not target:
@@ -95,29 +86,83 @@ class EffectsEngine:
             buffered_packets = []
 
         for op in ops:
-            opname = getattr(op, "op", None)
-            if opname == "damage":
-                amt = getattr(op, "amount", 0)
+            if op.op == "damage":
+                amt = op.amount
                 base = amt if isinstance(amt, (int, float)) else eval_for_actor(str(amt), actor) if actor else 0
                 final = int(round(float(base) * max(0.0, damage_scale) * max(1, crit_mult)))
-                dtype = getattr(op, "damage_type", "typeless")
+                dtype = op.damage_type
                 pkt = DamagePacket(
                     amount=max(0, int(final)),
                     dkind=dtype,
-                    counts_as_magic=bool(getattr(op, "counts_as_magic", False)),
-                    counts_as_material=getattr(op, "counts_as_material", None),
-                    counts_as_alignment=getattr(op, "counts_as_alignment", None),
+                    counts_as_magic=bool(op.counts_as_magic),
+                    counts_as_material=op.counts_as_material,
+                    counts_as_alignment=op.counts_as_alignment,
                 )
                 buffered_packets.append(pkt)
                 continue
+            
+            flush_packets()
+
+            if op.op == "heal_hp":
+                if actor:
+                    amt = int(eval_for_actor(op.amount, actor))
+                    if target:
+                        if getattr(op, "nonlethal_only", False):
+                            target.nonlethal_damage = max(0, target.nonlethal_damage - amt)
+                        else:
+                            target.hp_current = min(target.hp_max, target.hp_current + amt)
+                        out.append(f"[Heal] {target.name} +{amt} HP")
+            elif op.op == "temp_hp":
+                if self.resources and target and actor:
+                    out += self.resources.grant_temp_hp(target.id, op.amount, effect_instance_id=parent_instance_id)
+            elif op.op == "ability.damage":
+                if target and actor:
+                    ab = op.ability
+                    sc = target.abilities.get(ab)
+                    if sc:
+                        sc.damage = max(0, sc.damage + int(eval_for_actor(op.amount, actor)))
+                        out.append(f"[Ability] {target.name} {ab.upper()} damage +{op.amount}")
+            elif op.op == "ability.drain":
+                ...
+            elif op.op == "condition.apply":
+                if self.conditions and target and actor:
+                    out += self.conditions.apply(op.id, actor, target, duration_override=op.duration, stacks=op.stacks, params=op.params)
+            elif op.op == "condition.remove":
+                if self.conditions and target:
+                    out += self.conditions.remove(op.id, target=target)
+            elif op.op == "resource.create":
+                if self.resources and target:
+                    _, logs2 = self.resources.create_from_definition(op.resource_id, owner_scope=op.owner_scope or "entity", owner_entity_id=target.id, initial_current=op.initial_current)
+                    out += logs2
+            elif op.op == "resource.spend":
+                if self.resources and target and actor:
+                    ok = self.resources.spend(target.id, op.resource_id, int(eval_for_actor(op.amount, actor)))
+                    out.append(f"[Res] spend {op.resource_id} {'OK' if ok else 'insufficient'}")
+            elif op.op == "resource.restore":
+                if self.resources and target and actor:
+                    amt = int(eval_for_actor(op.amount, actor)) if op.amount is not None else None
+                    self.resources.restore(target.id, op.resource_id, amount=amt, to_max=op.to_max)
+            elif op.op == "resource.set":
+                ...
+            elif op.op == "zone.create":
+                if self.zones and target:
+                    if op.zone_id:
+                        _, logs2 = self.zones.create_from_definition(op.zone_id, target.id)
+                    elif op.shape:
+                        _, logs2 = self.zones.create_inline(op.name or "Zone", op.shape, op.duration, op.hooks or [], target.id)
+                    out += logs2
+            elif op.op == "zone.destroy":
+                if self.zones and target:
+                    out += self.zones.destroy(target.id, zone_definition_id=op.zone_id, zone_instance_id=op.zone_instance_id)
+            elif op.op == "save":
+                # A nested save op inside hooks/ops: roll locally and run branches
+                # Resolve DC and roll a save on target using modifiers.resolved_stats
+                ...
             else:
-                # If we encounter a non-damage op, flush any accumulated packets first
-                flush_packets()
-                # ... handle other ops as before ...
+                out.append(f"[Effects] Unhandled op '{op.op}' (no-op)")
 
         # End: flush any remaining packets
         flush_packets()
-        # NOTE: The original function returned `out`, but the new one doesn't explicitly. Assuming it should.
         return out
 
     def tick_round(self) -> list[str]:
@@ -140,19 +185,17 @@ class EffectsEngine:
         return logs
 
     def _snapshot_duration_rounds(self, ed: EffectDefinition, source: Entity, target: Entity) -> tuple[str, int | None]:
-        if not ed.duration:
+        ds = ed.duration
+        if not ds:
             return "instantaneous", None
-        dur_type = ed.duration.type
-        rem_rounds = None
-        if dur_type == "rounds":
-            base = ed.duration.num_rounds or 0
-            per_level = ed.duration.per_level or 0
-            if per_level > 0:
-                # Use source's appropriate caster level
-                cl = source.caster_level_for(ed.abilityType)
-                base += per_level * cl
-            rem_rounds = int(base)
-        return dur_type, rem_rounds
+        if ds.type == "rounds":
+            if ds.value is not None:
+                return "rounds", max(0, int(ds.value))
+            if ds.formula:
+                v = eval_for_actor(ds.formula, source)
+                return "rounds", max(0, int(v)) if isinstance(v, (int, float)) else None
+            return "rounds", None
+        return ds.type, None
 
     def attach(self, effect_id: str, source: Entity, target: Entity, *, bound_choices: Optional[dict] = None) -> list[str]:
         trace = TraceSession()
@@ -214,7 +257,7 @@ class EffectsEngine:
         if bound_choices:
             inst.variables.update({f"choice.{k}": v for k, v in bound_choices.items()})
 
-        # Ops (with scaling/crit) → logs already from damage/resources/conditions
+        # Ops (with scaling/crit) -> logs already from damage/resources/conditions
         op_logs = self.execute_operations(list(ed.operations or []), source, target,
                                           parent_instance_id=inst.instance_id, logs=[],
                                           damage_scale=outcome.damage_scale, crit_mult=outcome.crit_mult)
@@ -227,7 +270,7 @@ class EffectsEngine:
             trace.add(msg)
             # After/stats diff (instantaneous conditions/resources may have changed display stats too)
             after_stats = self.modifiers.resolved_stats(target) if self.modifiers else None
-            if before_stats and after_stats:
+            if before_stats and after_stats and self.modifiers:
                 trace.extend(self.modifiers.diff_stats(before_stats, after_stats))
             self.state.last_trace = trace.dump()
             return logs
@@ -245,7 +288,7 @@ class EffectsEngine:
 
         # After resolved stats and diffs + (optional) per-path stacking explain
         after_stats = self.modifiers.resolved_stats(target) if self.modifiers else None
-        if before_stats and after_stats:
+        if before_stats and after_stats and self.modifiers:
             trace.extend(self.modifiers.diff_stats(before_stats, after_stats))
             # Optional: explain key paths that changed
             key_paths = ["ac.natural","ac.deflection","ac.dodge","attack.melee.bonus","attack.ranged.bonus","save.fort","save.ref","save.will","speed.land"]

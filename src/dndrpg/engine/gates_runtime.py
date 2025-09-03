@@ -68,7 +68,7 @@ class GatesEngine:
         roll = d20(self.rng)
         total = roll + cl
         passed = total >= sr_value or roll == 20
-        note = f"SR check d20({roll}) + CL {cl} = {total} vs SR {sr_value} → {'pass' if passed else 'fail'}"
+        note = f"SR check d20({roll}) + CL {cl} = {total} vs SR {sr_value} -> {'pass' if passed else 'fail'}"
         return SRResult(checked=True, passed=passed, note=note)
 
     # -------- Save gate --------
@@ -93,12 +93,12 @@ class GatesEngine:
         if roll == 1:
             succeeded = False
         branch = sg.effect or "negates"
-        note = f"{stype} save d20({roll}) + {save_total} = {total} vs DC {dc_val} → {'success' if succeeded else 'fail'} ({branch})"
+        note = f"{stype} save d20({roll}) + {save_total} = {total} vs DC {dc_val} -> {'success' if succeeded else 'fail'} ({branch})"
         return SaveResult(attempted=True, succeeded=succeeded, branch=branch, dc=dc_val, roll=roll, total=total, save_type=stype, note=note)
 
     # -------- Attack gate --------
     def _concealment_pct(self, source: Entity, target: Entity) -> int:
-        # Very simple: if target has invisible condition → 50%; can expand with lighting later
+        # Very simple: if target has invisible condition -> 50%; can expand with lighting later
         # Conditions are on state; ModifiersEngine can’t see tags list directly. We read target’s active conditions via modifiers.state.
         for inst in self.modifiers.state.active_conditions.get(target.id, []):
             # tags are stored on instance
@@ -137,19 +137,19 @@ class GatesEngine:
 
         # Auto miss/hit policy: natural 1 misses, natural 20 hits (threat)
         if roll == 1:
-            return AttackResult(True, False, False, default_crit_mult, ac_val, total, roll, False, f"Attack d20({roll}) + {atk_bonus} vs AC {ac_val} → auto miss")
+            return AttackResult(True, False, False, default_crit_mult, ac_val, total, roll, False, f"Attack d20({roll}) + {atk_bonus} vs AC {ac_val} -> auto miss")
 
         # Concealment
         conceal_pct = self._concealment_pct(source, target)
         if conceal_pct > 0:
             miss_roll = d100(self.rng)
             if miss_roll <= conceal_pct:
-                return AttackResult(True, False, False, default_crit_mult, ac_val, total, roll, True, f"Attack d20({roll}) + {atk_bonus} vs AC {ac_val} → concealment {conceal_pct}% miss (roll {miss_roll})")
+                return AttackResult(True, False, False, default_crit_mult, ac_val, total, roll, True, f"Attack d20({roll}) + {atk_bonus} vs AC {ac_val} -> concealment {conceal_pct}% miss (roll {miss_roll})")
 
         # Hit check
         hit = (total >= ac_val) or (roll == 20)
         if not hit:
-            return AttackResult(True, False, False, default_crit_mult, ac_val, total, roll, False, f"Attack d20({roll}) + {atk_bonus} vs AC {ac_val} → miss")
+            return AttackResult(True, False, False, default_crit_mult, ac_val, total, roll, False, f"Attack d20({roll}) + {atk_bonus} vs AC {ac_val} -> miss")
 
         thr = ag.threat_range or 20
         cmult = ag.crit_mult or 2 # Default to 2 if not specified in AttackGate
@@ -162,8 +162,8 @@ class GatesEngine:
             if confirm_total >= ac_val or confirm_roll == 20:
                 
                 return AttackResult(True, True, True, cmult, ac_val, total, roll, False,
-                                    f"Attack {roll}+{atk_bonus} vs AC {ac_val} → hit; crit confirm {confirm_roll}+{atk_bonus} → critical x{cmult}")
-        return AttackResult(True, True, False, cmult, ac_val, total, roll, False, f"Attack {roll}+{atk_bonus} vs AC {ac_val} → hit")
+                                    f"Attack {roll}+{atk_bonus} vs AC {ac_val} -> hit; crit confirm {confirm_roll}+{atk_bonus} -> critical x{cmult}")
+        return AttackResult(True, True, False, cmult, ac_val, total, roll, False, f"Attack {roll}+{atk_bonus} vs AC {ac_val} -> hit")
 
     # -------- Top-level evaluator --------
     def evaluate(self, ed: EffectDefinition, source: Entity, target: Entity) -> Tuple[GateOutcome, list[str]]:

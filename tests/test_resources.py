@@ -10,8 +10,13 @@ from dndrpg.engine.state import GameState
 @pytest.fixture
 def mock_content_index():
     return ContentIndex(
+        items_by_id={},
+        weapons={},
+        armors={},
+        shields={},
+        campaigns={},
+        kits={},
         effects={},
-        
         resources={
             "test_resource_level_capacity": ResourceDefinition(
                 id="test_resource_level_capacity",
@@ -55,14 +60,9 @@ def mock_content_index():
                 refresh=ResourceRefresh(cadence="per_round", behavior="increment_by", increment_by="level / 2")
             ),
         },
-        items_by_id={},
-        weapons={},
-        armors={},
-        shields={},
-        kits={},
-        
-        
-        campaigns={}
+        conditions={},
+        deities={},
+        zones={}
     )
 
 @pytest.fixture
@@ -70,9 +70,12 @@ def mock_game_state(mock_content_index):
     player_entity = Entity(id="player1", name="Test Player", level=5)
     gs = GameState(
         player=player_entity,
-        entities={"player1": player_entity},
-        current_round=0,
-        resources={}
+        npcs=[],
+        round_counter=0,
+        resources={},
+        mode="exploration",
+        clock_seconds=0.0,
+        rng_seed=123
     )
     return gs
 

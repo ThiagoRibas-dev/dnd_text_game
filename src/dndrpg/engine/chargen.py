@@ -9,7 +9,7 @@ from dndrpg.engine.conditions_runtime import ConditionsEngine
 from dndrpg.engine.rulehooks_runtime import RuleHooksRegistry
 from dndrpg.engine.state import GameState
 from dndrpg.engine.skills import skill_points_at_level1, max_ranks, CLASS_SKILLS
-from dndrpg.engine.spells import bonus_slots_from_mod, sorcerer_spells_known_from_cha
+from dndrpg.engine.spells import bonus_slots_from_mod, sorcerer_spells_known_from_cha, CLERIC_SPELLS_PER_DAY
 from dndrpg.engine.prereq import eval_prereq, BuildView
 
 @dataclass
@@ -31,7 +31,7 @@ class CharBuildState:
     gear_ids: List[str] = field(default_factory=list)  # simple; kits will fill
     feat_choices: Dict[str, Dict[str, str]] = field(default_factory=dict)  # feat_id -> {choice_name: value}
 
-def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tuple[bool, str]:
+def validate_character_picks(content: ContentIndex, picks: CharBuildState, campaign_id: str) -> tuple[bool, str]:
     # Validate Deity
     if picks.deity:
         deity_id = picks.deity # Assuming picks.deity is the ID
@@ -50,10 +50,9 @@ def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tu
                     return False, f"Domain '{domain_id}' is not allowed by deity '{deity_def.name}'."
 
     # Validate Campaign Allowed Lists
-    # Assuming there's always at least one campaign and we use the first one for character generation
-    if not content.campaigns:
-        return False, "No campaigns defined in content."
-    campaign_allowed = next(iter(content.campaigns.values())).allowed
+    if campaign_id not in content.campaigns:
+        return False, f"Campaign '{campaign_id}' not found in content."
+    campaign_allowed = content.campaigns[campaign_id].allowed
 
     # Validate Alignment against campaign allowed list
     if isinstance(campaign_allowed.alignments, list) and picks.alignment not in campaign_allowed.alignments:
@@ -106,13 +105,17 @@ def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tu
     # Validate Spells
     if picks.clazz == "cleric":
         wis_mod = (picks.abilities.get("wis", 10) - 10) // 2
-        expected_slots = bonus_slots_from_mod(wis_mod, max_level=picks.level) # Assuming max_level is current level
-        
+        base_slots = CLERIC_SPELLS_PER_DAY.get(picks.level, [0]*10)
+        bonus_slots = bonus_slots_from_mod(wis_mod, max_level=picks.level)
+
         for level, prepared_spells in picks.spells_prepared.items():
-            if level not in expected_slots:
-                return False, f"Cleric cannot prepare level {level} spells at this level."
-            if len(prepared_spells) > expected_slots[level]:
-                return False, f"Cleric prepared too many level {level} spells ({len(prepared_spells)}). Max allowed: {expected_slots[level]}."
+            total_slots = base_slots[level] + bonus_slots.get(level, 0)
+            # Add domain slot
+            if level > 0:
+                total_slots += 1
+
+            if len(prepared_spells) > total_slots:
+                return False, f"Cleric prepared too many level {level} spells ({len(prepared_spells)}). Max allowed: {total_slots}."
             for spell_id in prepared_spells:
                 if spell_id not in content.effects: # Assuming spells are effects
                     return False, f"Prepared spell '{spell_id}' does not exist."
@@ -146,10 +149,10 @@ def validate_character_picks(content: ContentIndex, picks: CharBuildState) -> tu
 
     return True, "Character picks are valid."
 
-def build_entity_from_state(content: ContentIndex, gs: GameState, picks: CharBuildState,
+def build_entity_from_state(content: ContentIndex, gs: GameState, picks: CharBuildState, campaign_id: str,
                             effects: EffectsEngine, resources: ResourceEngine, conditions: ConditionsEngine, hooks: RuleHooksRegistry) -> tuple[Entity | None, str | None]:
     # Validate character picks first
-    is_valid, validation_message = validate_character_picks(content, picks)
+    is_valid, validation_message = validate_character_picks(content, picks, campaign_id)
     if not is_valid:
         return None, validation_message
 

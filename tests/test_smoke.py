@@ -5,6 +5,7 @@ from dndrpg.engine.damage_runtime import DamageEngine, DamagePacket
 from dndrpg.engine.models import DREntry
 from dndrpg.engine.resources_runtime import ResourceState
 from dndrpg.engine.schema_models import AbsorptionSpec
+from dndrpg.engine.engine import GameEngine # Import GameEngine
 
 def test_smoke_default_player_stats():
     content_dir = Path(__file__).resolve().parents[1] / "src" / "dndrpg" / "content"
@@ -48,14 +49,14 @@ def test_damage_pipeline():
     packets = [DamagePacket(amount=15, dkind="fire")]
     result = damage_engine.apply_packets(p.id, packets)
     assert p.hp_current == 50 - (15 - 10)
-    assert any("[Dmg] Resist fire 10 → 15->5" in log for log in result.logs)
+    assert any("[Dmg] Resist fire 10 -> 15->5" in log for log in result.logs)
 
     # Test 3: Cold damage -> vulnerability applies
     p.hp_current = 50
     packets = [DamagePacket(amount=10, dkind="cold")]
     result = damage_engine.apply_packets(p.id, packets)
     assert p.hp_current == 50 - int(10 * 1.5)
-    assert any("[Dmg] Vulnerability cold x1.5 → 10->15" in log for log in result.logs)
+    assert any("[Dmg] Vulnerability cold x1.5 -> 10->15" in log for log in result.logs)
 
     # Test 4: Physical damage, but magic -> DR is bypassed
     p.hp_current = 50
@@ -86,7 +87,7 @@ def test_damage_pipeline_with_temp_hp():
     p = state.player
 
     # Temp HP as a resource
-    temp_hp_res = ResourceState(definition_id="res:temp_hp", name="Temporary HP", current=20, capacity=20, owner_entity_id=p.id)
+    temp_hp_res = ResourceState(definition_id="res.temp_hp", name="Temporary HP", current=20, max_computed=20, owner_entity_id=p.id)
     temp_hp_res.absorption = AbsorptionSpec(absorbTypes=["any"])
     state.resources[f"entity:{p.id}"] = [temp_hp_res]
 
@@ -102,3 +103,31 @@ def test_damage_pipeline_with_temp_hp():
     assert temp_hp_res.current == 0
     assert p.hp_current == 50 - 10
     assert any("[Dmg] Temporary HP absorbed 20 (0 left)" in log for log in result.logs)
+
+def test_engine_execute_smoke():
+    content_dir = Path(__file__).resolve().parents[1] / "src" / "dndrpg" / "content"
+    content = load_content(content_dir)
+    state: GameState = default_state(content)
+    
+    # Create a dummy player entity if default_state doesn't provide one
+    if not state.player:
+        from dndrpg.engine.models import Entity, AbilityScores
+        state.player = Entity(id="player", name="Test Player", abilities=AbilityScores())
+
+    engine = GameEngine(content, state)
+
+    # Test divine_power
+    # Assuming divine_power is an effect that grants temp HP
+    # You might need to ensure 'divine_power.json' exists in content/effects
+    # and has a 'temp_hp' operation.
+    result_divine_power = engine.execute("cast spell.divine_power", actor_id="player", target_id="player")
+    assert "temp_hp" in state.resources[f"entity:{state.player.id}"][0].definition_id # Check if temp_hp resource was granted
+    assert any("Granted Temp HP" in log for log in result_divine_power.logs)
+
+    # Test grease.square
+    # Assuming grease.square is an effect that creates a zone
+    # You might need to ensure 'grease_area.json' exists in content/effects
+    # and has a 'zone.create' operation.
+    result_grease = engine.execute("cast spell.grease.square", actor_id="player", target_id="player")
+    assert len(state.active_zones) > 0 # Check if a zone was created
+    assert any("Created Zone" in log for log in result_grease.logs)

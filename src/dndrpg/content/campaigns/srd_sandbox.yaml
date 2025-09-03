@@ -11,7 +11,9 @@ allowed:
   classes: ["fighter","cleric","sorcerer","monk"]
   feats: "*"
   alignments: "*"
-starting_gold_policy: "kits"
+wealth:
+  mode: kits # or "roll" | "fixed"
+  fixed_gp: 100
 starting_equipment_packs:
   fighter: ["kit.fighter.starter"]
   cleric: ["kit.cleric.starter"]

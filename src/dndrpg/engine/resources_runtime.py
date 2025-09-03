@@ -242,4 +242,4 @@ class ResourceEngine:
                             val = eval_for_actor(str(rs.refresh.increment_by), owner)
                             inc = int(val) if isinstance(val, (int,float)) else 0
                         rs.current = min(rs.max_computed, rs.current + max(0, inc))
-                # no_change → nothing
+                # no_change -> nothing

@@ -74,7 +74,7 @@ class StepAbility(StepBase):
                 Input(placeholder="WIS", id="pb_wis", classes="pb_wis"),
                 Input(placeholder="CHA", id="pb_cha", classes="pb_cha")
             ),
-            # Standard array/Scores generated → user chooses assignment order
+            # Standard array/Scores generated -> user chooses assignment order
             Label("Assignment order (comma-separated, e.g., str,dex,con,int,wis,cha):", id="assign_label"),
             Input(placeholder="str,dex,con,int,wis,cha", id="assign_input"),
             Button("Generate (4d6)", id="gen4d6_button"),
@@ -189,7 +189,7 @@ class StepSummary(StepBase):
                                     self.app_ref.engine.effects, self.app_ref.engine.resources,
                                     self.app_ref.engine.conditions, self.app_ref.engine.hooks)
             self.app_ref.engine.state.mode = "exploration"
-            self.app_ref.log.push("Character created. Entering exploration.")
+            self.app_ref.log_panel.push("Character created. Entering exploration.")
             self.app_ref.pop_screen()
             self.app_ref.refresh_all()
 

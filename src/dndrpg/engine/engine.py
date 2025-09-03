@@ -16,6 +16,13 @@ from .zones_runtime import ZoneEngine
 from .schema_models import EffectDefinition, Operation, Gates, AttackGate
 from .scheduler import Scheduler
 from .settings import load_settings, Settings # Import settings
+from .dice import roll_dice_str
+from .models import Weapon # Import Weapon for type hinting
+
+def _damage_kind_from_weapon(w: Weapon) -> str:
+    # choose first type; in 3.5 it's one of bludgeoning/piercing/slashing
+    mapping = {"bludgeoning":"physical.bludgeoning","piercing":"physical.piercing","slashing":"physical.slashing"}
+    return mapping.get((w.damage_types[0] if w.damage_types else "bludgeoning"), "physical.bludgeoning")
 
 ENGINE_VERSION = "0.1.0"
 
@@ -51,6 +58,8 @@ class GameEngine:
         self.should_quit: bool = False
 
     def _get_rng_seed(self) -> int:
+        if self.state.rng_seed is not None:
+            return self.state.rng_seed
         if self.settings.rng_seed_mode == "random":
             return random.randint(0, 2**32 - 1)
         elif self.settings.rng_seed_mode == "session":
@@ -61,20 +70,29 @@ class GameEngine:
         self.campaign = self.content.campaigns[camp_id]
         self.state = GameState(player=entity)
         self.slot_id = slot_id
-        save_game(slot_id, self.campaign.id, ENGINE_VERSION, self.state, description=entity.name)
+        # rebind sub-engines to new state
+        self.resources = ResourceEngine(self.content, self.state)
+        self.conditions = ConditionsEngine(self.content, self.state)
+        self.damage = DamageEngine(self.content, self.state)
+        self.modifiers = ModifiersEngine(self.content, self.state)
+        self.hooks = RuleHooksRegistry(self.content, self.state, None, self.conditions, self.resources)
+        self.zones = ZoneEngine(self.content, self.state, self.hooks)
+        self.effects = EffectsEngine(self.content, self.state,
+                                     resources=self.resources, conditions=self.conditions,
+                                     hooks=self.hooks, damage=self.damage,
+                                     zones=self.zones, modifiers=self.modifiers,
+                                     rng=self.rng, scheduler=self.scheduler)
+        self.hooks.effects = self.effects
+        self.scheduler.effects = self.effects
+        self.scheduler.hooks = self.hooks
+        save_game(slot_id, self.campaign.id, ENGINE_VERSION, self.state, self.rng, description=entity.name)
         return [f"New game started in campaign: {self.campaign.name}", f"Character: {entity.name}"]
 
     def continue_latest(self) -> list[str]:
         meta = latest_save()
         if not meta:
             return ["No saves found."]
-        self.slot_id = meta.slot_id
-        self.state = load_game(meta.slot_id, GameState)
-        self.campaign = self.content.campaigns.get(meta.campaign_id)
-        # Re-seed RNG from loaded state
-        if meta.rng_seed is not None:
-            self.rng.seed(meta.rng_seed)
-        return [f"Loaded latest save: {meta.slot_id} ({meta.description})"]
+        return self.load_slot(meta.slot_id)
 
     def load_slot(self, slot_id: str) -> list[str]:
         try:
@@ -84,8 +102,25 @@ class GameEngine:
                 return [f"Error: Save slot '{slot_id}' not found in metadata."]
             self.campaign = self.content.campaigns.get(md.campaign_id)
             self.slot_id = slot_id
+            # rebind sub-engines to new state
+            self.resources = ResourceEngine(self.content, self.state)
+            self.conditions = ConditionsEngine(self.content, self.state)
+            self.damage = DamageEngine(self.content, self.state)
+            self.modifiers = ModifiersEngine(self.content, self.state)
+            self.hooks = RuleHooksRegistry(self.content, self.state, None, self.conditions, self.resources)
+            self.zones = ZoneEngine(self.content, self.state, self.hooks)
+            self.effects = EffectsEngine(self.content, self.state,
+                                         resources=self.resources, conditions=self.conditions,
+                                         hooks=self.hooks, damage=self.damage,
+                                         zones=self.zones, modifiers=self.modifiers,
+                                         rng=self.rng, scheduler=self.scheduler)
+            self.hooks.effects = self.effects
+            self.scheduler.effects = self.effects
+            self.scheduler.hooks = self.hooks
             # Re-seed RNG from loaded state
-            if md.rng_seed is not None:
+            if md.rng_state is not None:
+                self.rng.setstate(md.rng_state)
+            elif md.rng_seed is not None:
                 self.rng.seed(md.rng_seed)
             return [f"Loaded save: {slot_id}"]
         except Exception as e:
@@ -94,7 +129,7 @@ class GameEngine:
     def save_current(self) -> list[str]:
         if not self.slot_id or not self.campaign:
             return ["No active slot/campaign."]
-        save_game(self.slot_id, self.campaign.id, ENGINE_VERSION, self.state, description=self.state.player.name)
+        save_game(self.slot_id, self.campaign.id, ENGINE_VERSION, self.state, self.rng, description=self.state.player.name)
         return ["Game saved."]
 
     def attack(self, actor: Entity, target: Entity) -> list[str]:
@@ -105,18 +140,14 @@ class GameEngine:
             return logs
 
         # Create a temporary effect definition for the attack
+        amount = roll_dice_str(self.rng, weapon.damage_dice_m)
+        dtype = _damage_kind_from_weapon(weapon)
         attack_effect = EffectDefinition(
             id="attack.runtime.weapon",
             name=f"Attack with {weapon.name}",
             abilityType="Ex",
-            gates=Gates(attack=AttackGate(type="melee")),
-            operations=[
-                Operation(
-                    op="damage",
-                    amount=weapon.damage,
-                    damage_type=weapon.damage_type,
-                )
-            ]
+            gates=Gates(attack=AttackGate(mode="melee")),  # ac_type default "normal"
+            operations=[Operation(op="damage", amount=amount, damage_type=dtype)]
         )
 
         # Temporarily add it to content

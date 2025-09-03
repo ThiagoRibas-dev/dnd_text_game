@@ -7,15 +7,16 @@ import yaml
 from pydantic import TypeAdapter, Field as PField
 from .models import Item, Weapon, Armor, Shield
 from .campaigns import CampaignDefinition, StartingKit
-from .schema_models import EffectDefinition, ResourceDefinition, ConditionDefinition, DeityDefinition
+from .schema_models import EffectDefinition, ResourceDefinition, ConditionDefinition, DeityDefinition, ZoneDefinition
 
 ItemUnion = Annotated[Union[Weapon, Armor, Shield, Item], PField(discriminator="type")]
-ItemAdapter = TypeAdapter(ItemUnion)
+ItemAdapter: TypeAdapter[ItemUnion] = TypeAdapter(ItemUnion)
 CampaignAdapter = TypeAdapter(CampaignDefinition)
 KitAdapter = TypeAdapter(StartingKit)
 EffectAdapter = TypeAdapter(EffectDefinition)
 ResourceAdapter = TypeAdapter(ResourceDefinition)
 ConditionAdapter = TypeAdapter(ConditionDefinition)
+ZoneAdapter = TypeAdapter(ZoneDefinition)
 
 def _load_file(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
@@ -25,7 +26,7 @@ def _load_file(path: Path) -> dict:
 
 def _iter_files(root: Path, exts: Tuple[str,...]=(".json",".yaml",".yml")) -> Iterable[Path]:
     if not root.exists():
-        return []
+        return
     for p in root.rglob("*"):
         if p.is_file() and p.suffix.lower() in exts:
             yield p
@@ -42,6 +43,7 @@ class ContentIndex:
     resources: Dict[str, ResourceDefinition]
     conditions: Dict[str, ConditionDefinition]
     deities: Dict[str, DeityDefinition] # NEW
+    zones: Dict[str, ZoneDefinition]
 
     def get_item(self, iid: str) -> Item:
         return self.items_by_id[iid]
@@ -55,6 +57,8 @@ class ContentIndex:
     def get_resource(self, rid: str) -> ResourceDefinition:
         return self.resources[rid]
     def get_condition(self, cid: str) -> ConditionDefinition: return self.conditions[cid]
+    def get_zone(self, zid: str) -> ZoneDefinition:
+        return self.zones[zid]
 
 def load_content(base_dir: Path) -> ContentIndex:
     items_by_id: Dict[str, Item] = {}
@@ -128,8 +132,16 @@ def load_content(base_dir: Path) -> ContentIndex:
             raise RuntimeError(f"Duplicate deity id {deity.id} in {fp}")
         deities[deity.id] = deity
 
+    zones: Dict[str, ZoneDefinition] = {}
+    for fp in _iter_files(base_dir / "zones"):
+        data = _load_file(fp)
+        z = ZoneAdapter.validate_python(data)
+        if z.id in zones:
+            raise RuntimeError(f"Duplicate zone id {z.id} in {fp}")
+        zones[z.id] = z
+
     return ContentIndex(
         items_by_id=items_by_id, weapons=weapons, armors=armors, shields=shields,
         campaigns=campaigns, kits=kits, effects=effects, resources=resources,
-        conditions=conditions, deities=deities
+        conditions=conditions, deities=deities, zones=zones
     )

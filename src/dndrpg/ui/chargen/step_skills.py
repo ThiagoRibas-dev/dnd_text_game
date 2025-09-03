@@ -77,7 +77,7 @@ class StepSkills(StepBase):
     def on_skill_input_changed(self, event: Input.Changed):
         # Clear previous messages
         self.query_one("#skill_message_label", Label).update("")
-        self.app_ref.log_panel.push(f"[CharGen] Skill input changed: {event.control.id} value: {event.value}")
+        self.game_log(f"[CharGen] Skill input changed: {event.control.id} value: {event.value}")
         self._update_skill_points()
 
     def _update_skill_points(self):
@@ -100,21 +100,21 @@ class StepSkills(StepBase):
                 if ranks < 0:
                     ranks = 0
                     skill_input.value = "0" # Reset invalid input
-                    self.query_one("#skill_message_label", Label).update(f"[CharGen] {skill_name.title()} ranks cannot be negative. Reset to 0.")
+                    self.game_log(f"[CharGen] {skill_name.title()} ranks cannot be negative. Reset to 0.")
                 
                 # Validate max ranks
                 is_class_skill = skill_name in CLASS_SKILLS.get(picks.clazz, [])
                 max_allowed_ranks = max_ranks(1, is_class_skill) # Assuming level 1
 
                 if ranks > max_allowed_ranks:
-                    self.query_one("#skill_message_label", Label).update(f"[CharGen] {skill_name.title()} ranks cannot exceed {max_allowed_ranks}. Reset to {max_allowed_ranks}.")
+                    self.game_log(f"[CharGen] {skill_name.title()} ranks cannot exceed {max_allowed_ranks}. Reset to {max_allowed_ranks}.")
                     ranks = max_allowed_ranks
                     skill_input.value = str(ranks) # Correct invalid input
 
                 current_skills[skill_name] = ranks
                 allocated_points += ranks
             except ValueError:
-                self.query_one("#skill_message_label", Label).update(f"[CharGen] Invalid input for {skill_name.title()} ranks. Please enter a number. Reset to 0.")
+                self.game_log(f"[CharGen] Invalid input for {skill_name.title()} ranks. Please enter a number. Reset to 0.")
                 skill_input.value = "0" # Reset invalid input
                 current_skills[skill_name] = 0
 
@@ -124,7 +124,7 @@ class StepSkills(StepBase):
 
         if remaining_points < 0:
             self.query_one("#skill_points_remaining", Static).add_class("error")
-            self.query_one("#skill_message_label", Label).update(f"[CharGen] You have allocated {abs(remaining_points)} too many skill points!")
+            self.game_log(f"[CharGen] You have allocated {abs(remaining_points)} too many skill points!")
         else:
             self.query_one("#skill_points_remaining", Static).remove_class("error")
             # Clear message if everything is valid
@@ -144,7 +144,7 @@ class StepSkills(StepBase):
 
             allocated_points = sum(picks.skills.values())
             if allocated_points > total_skill_points:
-                self.query_one("#skill_message_label", Label).update(f"[CharGen] You have allocated {allocated_points - total_skill_points} too many skill points. Please adjust.")
+                self.game_log(f"[CharGen] You have allocated {allocated_points - total_skill_points} too many skill points. Please adjust.")
                 return
             
             # Proceed to next step (StepFeats)

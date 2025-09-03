@@ -56,6 +56,12 @@ class DamageEngine:
             return None
         if self.state.player.id == ent_id:
             return self.state.player
+        for p in self.state.party:
+            if p.id == ent_id:
+                return p
+        for npc in self.state.npcs:
+            if npc.id == ent_id:
+                return npc
         return None
 
     def _find_absorbers(self, entity_id: str, dkind: DamageKind) -> List["ResourceState"]:
@@ -137,7 +143,7 @@ class DamageEngine:
             if resist > 0 and p.amount > 0:
                 reduced = max(0, p.amount - resist)
                 if reduced != p.amount:
-                    logs.append(f"[Dmg] Resist {p.dkind} {resist} → {p.amount}->{reduced}")
+                    logs.append(f"[Dmg] Resist {p.dkind} {resist} -> {p.amount}->{reduced}")
                     p.amount = reduced
 
         # 3.2 DR per attack total (physical only; non-bypassed)
@@ -198,7 +204,7 @@ class DamageEngine:
             if v != 1.0:
                 new_amt = int(max(0, round(p.amount * v)))
                 if new_amt != p.amount:
-                    logs.append(f"[Dmg] Vulnerability {p.dkind} x{v} → {p.amount}->{new_amt}")
+                    logs.append(f"[Dmg] Vulnerability {p.dkind} x{v} -> {p.amount}->{new_amt}")
                     p.amount = new_amt
 
         # Stage 5: Apply to HP / Nonlethal

@@ -1,6 +1,12 @@
 from __future__ import annotations
 from typing import Dict
 
+CLERIC_SPELLS_PER_DAY = {
+    # level: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    1: [3, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    # ... add more levels as needed
+}
+
 def bonus_slots_from_mod(mod: int, max_level: int = 1) -> Dict[int, int]:
     # RAW table simplified for levels 0–1 (0 has no bonus; 1 has +1 at Wis/Cha 12+)
     bonus = {0: 0, 1: 0}

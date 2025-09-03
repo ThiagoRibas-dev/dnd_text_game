@@ -47,11 +47,9 @@ class StepFeats(StepBase):
             feats_container.mount(Label(feat_def.description))
 
             # Prerequisite checking
-            can_take_feat = True
-            prereq_msg = ""
+            can_take_feat, prereq_msg = True, ""
             if feat_def.prerequisites:
-                can_take_feat = eval_prereq(feat_def.prerequisites, build_view)
-                prereq_msg = feat_def.prerequisites
+                can_take_feat, prereq_msg = eval_prereq(feat_def.prerequisites, build_view)
 
             checkbox_id = f"feat_checkbox_{feat_def.id}"
             checkbox = Checkbox(
@@ -104,7 +102,7 @@ class StepFeats(StepBase):
             self.app_ref.cg_state.picks.feats.add(feat_id)
         else: # Checkbox is unchecked
             self.app_ref.cg_state.picks.feats.discard(feat_id)
-        self.app_ref.log_panel.push(f"Selected feats: {sorted(list(self.app_ref.cg_state.picks.feats))}")
+        self.game_log(f"Selected feats: {sorted(list(self.app_ref.cg_state.picks.feats))}")
 
     @on(Input.Changed, ".feat_choice_input")
     def on_feat_choice_input_changed(self, event: Input.Changed):
@@ -120,7 +118,7 @@ class StepFeats(StepBase):
         if feat_id not in self.app_ref.cg_state.picks.feat_choices:
             self.app_ref.cg_state.picks.feat_choices[feat_id] = {}
         self.app_ref.cg_state.picks.feat_choices[feat_id][choice_id] = event.value
-        self.app_ref.log_panel.push(f"Feat choice for {feat_id} ({choice_id}): {event.value}")
+        self.game_log(f"Feat choice for {feat_id} ({choice_id}): {event.value}")
 
     @on(Select.Changed, ".feat_choice_select")
     def on_feat_choice_select_changed(self, event: Select.Changed):
@@ -133,7 +131,7 @@ class StepFeats(StepBase):
         if feat_id not in self.app_ref.cg_state.picks.feat_choices:
             self.app_ref.cg_state.picks.feat_choices[feat_id] = {}
         self.app_ref.cg_state.picks.feat_choices[feat_id][choice_id] = event.value
-        self.app_ref.log_panel.push(f"Feat choice for {feat_id} ({choice_id}): {event.value}")
+        self.game_log(f"Feat choice for {feat_id} ({choice_id}): {event.value}")
          
     def on_button_pressed(self, ev):
         if ev.button.id == "next":
@@ -146,8 +144,9 @@ class StepFeats(StepBase):
             for feat_id in picks.feats:
                 feat_def = self.app_ref.engine.content.effects.get(feat_id)
                 if feat_def and feat_def.prerequisites:
-                    if not eval_prereq(feat_def.prerequisites, build_view):
-                        self.app_ref.log_panel.push(f"[CharGen] Prerequisite not met for {feat_def.name}: {feat_def.prerequisites}")
+                    ok, msg = eval_prereq(feat_def.prerequisites, build_view)
+                    if not ok:
+                        self.game_log(f"[CharGen] Prerequisite not met for {feat_def.name}: {msg}")
                         all_feats_valid = False
             
             if not all_feats_valid:

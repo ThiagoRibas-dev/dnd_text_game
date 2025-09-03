@@ -306,7 +306,7 @@ class ModifiersEngine:
         # set/replace
         for em in mods:
             if em.operator in ("set","replace"):
-                lines.append(f'  set → {em.value} from {em.source_name} [{em.source_kind}]')
+                lines.append(f'  set -> {em.value} from {em.source_name} [{em.source_kind}]')
                 current = em.value
         # add/sub
         by_type: Dict[str, List[EvaluatedMod]] = {}
@@ -402,7 +402,7 @@ class ModifiersEngine:
                 base = entity.natural_armor
             # other bases 0 for additive components
             final, plines = self.apply_with_trace(base, mods)
-            lines.append(f"{path}: base {base} → {int(round(final))}")
+            lines.append(f"{path}: base {base} -> {int(round(final))}")
             lines.extend(plines)
         return lines
 
@@ -441,9 +441,9 @@ class ModifiersEngine:
                 if isinstance(val_a, (int, float)) and isinstance(val_b, (int, float)):
                     diff = val_a - val_b
                     sign = "+" if diff > 0 else ""
-                    lines.append(f'  {label}: {val_b} → {val_a} ({sign}{diff})')
+                    lines.append(f'  {label}: {val_b} -> {val_a} ({sign}{diff})')
                 else:
-                    lines.append(f'  {label}: {val_b} → {val_a}')
+                    lines.append(f'  {label}: {val_b} -> {val_a}')
 
         if len(lines) == 1:
             lines.append("  (no changes)")

@@ -24,17 +24,18 @@ class StepSummary(StepBase):
             self.app_ref.pop_screen()
         if ev.button.id == "confirm":
             # Explicitly validate character picks before building the entity
+            campaign_id = self.app_ref.engine.campaign.id if self.app_ref.engine.campaign else ""
             is_valid, validation_message = validate_character_picks(
-                self.app_ref.engine.content, self.app_ref.cg_state.picks
+                self.app_ref.engine.content, self.app_ref.cg_state.picks, campaign_id
             )
             if not is_valid:
                 self.app_ref.log_panel.push(f"[CharGen Validation Error] {validation_message}")
                 return
 
-            build_entity_from_state(self.app_ref.engine.content, self.app_ref.engine.state, self.app_ref.cg_state.picks,
+            build_entity_from_state(self.app_ref.engine.content, self.app_ref.engine.state, self.app_ref.cg_state.picks, campaign_id,
                                     self.app_ref.engine.effects, self.app_ref.engine.resources,
                                     self.app_ref.engine.conditions, self.app_ref.engine.hooks)
             self.app_ref.engine.state.mode = "exploration"
-            self.app_ref.log.push("Character created. Entering exploration.")
+            self.app_ref.log_panel.push("Character created. Entering exploration.")
             self.app_ref.pop_screen()
             self.app_ref.refresh_all()
